@@ -6,4 +6,4 @@ cmake --build build
 ./build/test_market_data_parser
 ./build/llgw
 
-echo "All Day 1 checks passed."
+echo "All Day 2 checks passed."

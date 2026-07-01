@@ -1,11 +1,14 @@
 #include "llgw/market_data_parser.hpp"
 
+#include <array>
 #include <charconv>
 #include <cstdint>
 #include <string_view>
 
 namespace llgw {
 namespace {
+
+constexpr std::size_t kExpectedFieldCount = 6;
 
 bool ParseDouble(std::string_view value, double* out) {
   if (value.empty() || out == nullptr) {
@@ -43,74 +46,91 @@ bool ParseUint64(std::string_view value, std::uint64_t* out) {
   return ec == std::errc{} && ptr == end;
 }
 
-bool NextField(std::string_view* input, std::string_view* field) {
-  if (input == nullptr || field == nullptr) {
+std::string_view StripTrailingCarriageReturn(std::string_view line) {
+  if (!line.empty() && line.back() == '\r') {
+    line.remove_suffix(1);
+  }
+  return line;
+}
+
+bool SplitCsvLine(std::string_view line, std::array<std::string_view, kExpectedFieldCount>* fields) {
+  if (fields == nullptr) {
     return false;
   }
 
-  const std::size_t pos = input->find(',');
-  if (pos == std::string_view::npos) {
-    *field = *input;
-    *input = {};
-    return true;
+  std::size_t field_index = 0;
+  std::size_t start = 0;
+
+  while (true) {
+    if (field_index >= kExpectedFieldCount) {
+      return false;
+    }
+
+    const std::size_t comma = line.find(',', start);
+    if (comma == std::string_view::npos) {
+      (*fields)[field_index++] = line.substr(start);
+      break;
+    }
+
+    (*fields)[field_index++] = line.substr(start, comma - start);
+    start = comma + 1;
   }
 
-  *field = input->substr(0, pos);
-  input->remove_prefix(pos + 1);
-  return true;
+  return field_index == kExpectedFieldCount;
 }
 
 }  // namespace
 
 ParseResult ParseMarketDataLine(std::string_view line) {
   ParseResult result{};
+  line = StripTrailingCarriageReturn(line);
 
   if (line.empty()) {
     result.status = ParseStatus::kEmptyInput;
     return result;
   }
 
+  std::array<std::string_view, kExpectedFieldCount> fields{};
+  if (!SplitCsvLine(line, &fields)) {
+    result.status = ParseStatus::kWrongFieldCount;
+    return result;
+  }
+
   MarketDataUpdate update{};
-  std::string_view remaining = line;
-  std::string_view field;
+  update.symbol = fields[0];
 
-  if (!NextField(&remaining, &field) || field.empty()) {
-    result.status = ParseStatus::kWrongFieldCount;
-    return result;
-  }
-  update.symbol = field;
-
-  if (!NextField(&remaining, &field) || !ParseDouble(field, &update.bid_price)) {
-    result.status = ParseStatus::kInvalidNumber;
-    return result;
-  }
-
-  if (!NextField(&remaining, &field) || !ParseUint32(field, &update.bid_size)) {
-    result.status = ParseStatus::kInvalidNumber;
-    return result;
-  }
-
-  if (!NextField(&remaining, &field) || !ParseDouble(field, &update.ask_price)) {
-    result.status = ParseStatus::kInvalidNumber;
-    return result;
-  }
-
-  if (!NextField(&remaining, &field) || !ParseUint32(field, &update.ask_size)) {
-    result.status = ParseStatus::kInvalidNumber;
-    return result;
-  }
-
-  if (!NextField(&remaining, &field) || !ParseUint64(field, &update.exchange_ts_ns)) {
-    result.status = ParseStatus::kInvalidNumber;
-    return result;
-  }
-
-  if (!remaining.empty()) {
+  if (update.symbol.empty()) {
     result.status = ParseStatus::kWrongFieldCount;
     return result;
   }
 
-  if (update.bid_price <= 0.0 || update.ask_price <= 0.0 || update.bid_price > update.ask_price) {
+  if (!ParseDouble(fields[1], &update.bid_price)) {
+    result.status = ParseStatus::kInvalidNumber;
+    return result;
+  }
+
+  if (!ParseUint32(fields[2], &update.bid_size)) {
+    result.status = ParseStatus::kInvalidNumber;
+    return result;
+  }
+
+  if (!ParseDouble(fields[3], &update.ask_price)) {
+    result.status = ParseStatus::kInvalidNumber;
+    return result;
+  }
+
+  if (!ParseUint32(fields[4], &update.ask_size)) {
+    result.status = ParseStatus::kInvalidNumber;
+    return result;
+  }
+
+  if (!ParseUint64(fields[5], &update.exchange_ts_ns)) {
+    result.status = ParseStatus::kInvalidNumber;
+    return result;
+  }
+
+  if (update.bid_price <= 0.0 || update.ask_price <= 0.0 || update.bid_price > update.ask_price ||
+      update.bid_size == 0 || update.ask_size == 0) {
     result.status = ParseStatus::kInvalidMarket;
     return result;
   }

@@ -13,6 +13,11 @@ void Expect(bool condition, const char* message) {
   }
 }
 
+void ExpectStatus(std::string_view line, llgw::ParseStatus expected_status, const char* message) {
+  const llgw::ParseResult result = llgw::ParseMarketDataLine(line);
+  Expect(result.status == expected_status, message);
+}
+
 void TestValidLine() {
   constexpr std::string_view line = "AAPL,192.10,100,192.12,200,1710000000123456789";
 
@@ -28,38 +33,107 @@ void TestValidLine() {
          "exchange timestamp should match");
 }
 
+void TestValidLineWithCarriageReturn() {
+  constexpr std::string_view line = "AAPL,192.10,100,192.12,200,1710000000123456789\r";
+
+  const llgw::ParseResult result = llgw::ParseMarketDataLine(line);
+
+  Expect(result.status == llgw::ParseStatus::kOk, "CRLF-style line should parse");
+  Expect(result.update.symbol == "AAPL", "symbol should be AAPL after CR stripping");
+}
+
 void TestEmptyLine() {
-  const llgw::ParseResult result = llgw::ParseMarketDataLine("");
-  Expect(result.status == llgw::ParseStatus::kEmptyInput, "empty line should fail");
+  ExpectStatus("", llgw::ParseStatus::kEmptyInput, "empty line should fail");
 }
 
 void TestMissingFields() {
-  const llgw::ParseResult result = llgw::ParseMarketDataLine("AAPL,192.10,100");
-  Expect(result.status == llgw::ParseStatus::kInvalidNumber ||
-             result.status == llgw::ParseStatus::kWrongFieldCount,
-         "missing fields should fail");
+  ExpectStatus("AAPL,192.10,100", llgw::ParseStatus::kWrongFieldCount,
+               "missing fields should fail with wrong field count");
 }
 
-void TestInvalidNumber() {
-  const llgw::ParseResult result =
-      llgw::ParseMarketDataLine("AAPL,abc,100,192.12,200,1710000000123456789");
-  Expect(result.status == llgw::ParseStatus::kInvalidNumber, "invalid number should fail");
+void TestExtraFields() {
+  ExpectStatus("AAPL,192.10,100,192.12,200,1710000000123456789,EXTRA",
+               llgw::ParseStatus::kWrongFieldCount,
+               "extra fields should fail with wrong field count");
+}
+
+void TestEmptySymbol() {
+  ExpectStatus(",192.10,100,192.12,200,1710000000123456789",
+               llgw::ParseStatus::kWrongFieldCount, "empty symbol should fail");
+}
+
+void TestInvalidBidPrice() {
+  ExpectStatus("AAPL,abc,100,192.12,200,1710000000123456789",
+               llgw::ParseStatus::kInvalidNumber, "invalid bid price should fail");
+}
+
+void TestInvalidBidSize() {
+  ExpectStatus("AAPL,192.10,abc,192.12,200,1710000000123456789",
+               llgw::ParseStatus::kInvalidNumber, "invalid bid size should fail");
+}
+
+void TestInvalidAskPrice() {
+  ExpectStatus("AAPL,192.10,100,abc,200,1710000000123456789",
+               llgw::ParseStatus::kInvalidNumber, "invalid ask price should fail");
+}
+
+void TestInvalidAskSize() {
+  ExpectStatus("AAPL,192.10,100,192.12,abc,1710000000123456789",
+               llgw::ParseStatus::kInvalidNumber, "invalid ask size should fail");
+}
+
+void TestInvalidTimestamp() {
+  ExpectStatus("AAPL,192.10,100,192.12,200,abc", llgw::ParseStatus::kInvalidNumber,
+               "invalid timestamp should fail");
+}
+
+void TestNegativeBidPrice() {
+  ExpectStatus("AAPL,-192.10,100,192.12,200,1710000000123456789",
+               llgw::ParseStatus::kInvalidMarket, "negative bid price should fail");
+}
+
+void TestZeroBidSize() {
+  ExpectStatus("AAPL,192.10,0,192.12,200,1710000000123456789",
+               llgw::ParseStatus::kInvalidMarket, "zero bid size should fail");
+}
+
+void TestZeroAskSize() {
+  ExpectStatus("AAPL,192.10,100,192.12,0,1710000000123456789",
+               llgw::ParseStatus::kInvalidMarket, "zero ask size should fail");
 }
 
 void TestCrossedMarket() {
+  ExpectStatus("AAPL,193.00,100,192.00,200,1710000000123456789",
+               llgw::ParseStatus::kInvalidMarket, "crossed market should fail");
+}
+
+void TestLockedMarketIsAllowed() {
   const llgw::ParseResult result =
-      llgw::ParseMarketDataLine("AAPL,193.00,100,192.00,200,1710000000123456789");
-  Expect(result.status == llgw::ParseStatus::kInvalidMarket, "crossed market should fail");
+      llgw::ParseMarketDataLine("AAPL,192.10,100,192.10,200,1710000000123456789");
+
+  Expect(result.status == llgw::ParseStatus::kOk, "locked market should be allowed for now");
+  Expect(result.update.bid_price == result.update.ask_price, "bid and ask should match");
 }
 
 }  // namespace
 
 int main() {
   TestValidLine();
+  TestValidLineWithCarriageReturn();
   TestEmptyLine();
   TestMissingFields();
-  TestInvalidNumber();
+  TestExtraFields();
+  TestEmptySymbol();
+  TestInvalidBidPrice();
+  TestInvalidBidSize();
+  TestInvalidAskPrice();
+  TestInvalidAskSize();
+  TestInvalidTimestamp();
+  TestNegativeBidPrice();
+  TestZeroBidSize();
+  TestZeroAskSize();
   TestCrossedMarket();
+  TestLockedMarketIsAllowed();
 
   std::cout << "All parser tests passed.\n";
   return 0;

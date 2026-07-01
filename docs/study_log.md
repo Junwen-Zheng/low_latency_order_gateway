@@ -10,13 +10,35 @@ Focus areas:
 - C++20 compiler settings
 - Header/source layout
 - Fixed-format market-data message representation
-- Basic parser using std::string_view
-- Numeric parsing with std::from_chars
+- Basic parser using `std::string_view`
+- Numeric parsing with `std::from_chars`
 - Explicit parser status codes instead of exceptions
-- Simple assert-based tests
+- Simple parser tests
 
 Notes:
 
 - I intentionally avoided claiming this is a production trading system.
 - The current project only establishes the parser foundation.
 - Performance claims will only be added after benchmark methodology exists.
+
+## Day 2
+
+Strengthened parser correctness and added sample feed validation.
+
+Focus areas:
+
+- Exact field-count validation for fixed-format market-data lines
+- Stronger malformed-input coverage
+- Empty symbol rejection
+- Extra/missing field rejection
+- Invalid numeric field rejection
+- Invalid market-state rejection
+- CRLF-style line handling
+- Added `data/sample_feed.txt`
+- Updated the main executable to validate the sample feed file
+
+Notes:
+
+- I still intentionally avoided benchmark numbers.
+- The project now has better parser correctness before any latency claims.
+- Locked markets are currently allowed, but crossed markets are rejected.
