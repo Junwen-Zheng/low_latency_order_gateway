@@ -1,32 +1,22 @@
-#include <fstream>
 #include <iostream>
-#include <string>
-#include <string_view>
 
-#include "llgw/market_data_parser.hpp"
+#include "llgw/feed_replay.hpp"
 
 int main() {
-  const char* sample_feed_path = "data/sample_feed.txt";
+  const llgw::FeedReplayResult result =
+      llgw::ReplayMarketDataFile("data/sample_feed.txt", [](const llgw::MarketDataUpdate&) {});
 
-  std::ifstream input(sample_feed_path);
-  if (!input.is_open()) {
-    std::cerr << "Failed to open sample feed file: " << sample_feed_path << "\n";
+  if (result.status != llgw::FeedReplayStatus::kOk) {
+    std::cerr << "Feed replay failed: " << llgw::ToString(result.status) << "\n";
+    if (result.status == llgw::FeedReplayStatus::kParseError) {
+      std::cerr << "  error_line=" << result.error_line << "\n";
+    }
     return 1;
   }
 
-  std::size_t parsed_count = 0;
-  std::string line;
+  std::cout << "Replay completed successfully\n";
+  std::cout << "  lines_read=" << result.lines_read << "\n";
+  std::cout << "  updates_parsed=" << result.updates_parsed << "\n";
 
-  while (std::getline(input, line)) {
-    const llgw::ParseResult result = llgw::ParseMarketDataLine(line);
-    if (result.status != llgw::ParseStatus::kOk) {
-      std::cerr << "Failed to parse sample feed line: " << line << "\n";
-      return 1;
-    }
-
-    ++parsed_count;
-  }
-
-  std::cout << "Parsed sample feed updates: " << parsed_count << "\n";
   return 0;
 }

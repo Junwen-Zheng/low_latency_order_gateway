@@ -42,3 +42,24 @@ Notes:
 - I still intentionally avoided benchmark numbers.
 - The project now has better parser correctness before any latency claims.
 - Locked markets are currently allowed, but crossed markets are rejected.
+
+## Day 3
+
+Added a dedicated deterministic feed replay component.
+
+Focus areas:
+
+- Moved file replay logic out of `main`
+- Added `ReplayMarketDataFile`
+- Added replay status reporting for file-open failures and parse failures
+- Added callback-based replay handling
+- Added deterministic replay tests
+- Verified replay stops at the first malformed line
+- Verified missing-file and empty-file behavior
+- Updated `main` to use the replay component
+
+Notes:
+
+- The replay callback receives a `MarketDataUpdate` whose `symbol` field is a `std::string_view` into the current input line.
+- Callers that need to store symbol values beyond the callback must copy them.
+- No latency or throughput claims are made yet.
