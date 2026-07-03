@@ -63,3 +63,23 @@ Notes:
 - The replay callback receives a `MarketDataUpdate` whose `symbol` field is a `std::string_view` into the current input line.
 - Callers that need to store symbol values beyond the callback must copy them.
 - No latency or throughput claims are made yet.
+
+## Day 4
+
+Added deterministic order request/response flow.
+
+Focus areas:
+
+- Added order side, order request, order response, and reject reason message types
+- Added `ExchangeSimulator`
+- Added `OrderGateway`
+- Added accept/reject validation for order symbol, price, quantity, and duplicate sequence IDs
+- Added gateway counters for sent, accepted, and rejected orders
+- Added deterministic tests for exchange simulator and gateway behavior
+- Updated main demo to replay market data and send a simple AAPL order
+
+Notes:
+
+- The simulator does not model fills, order books, matching, partial fills, or live exchange connectivity.
+- The current order path exists to test deterministic order acceptance/rejection behavior.
+- No latency or throughput claims are made yet.

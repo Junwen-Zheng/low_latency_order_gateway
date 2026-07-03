@@ -5,6 +5,11 @@
 
 namespace llgw {
 
+enum class Side {
+  kBuy,
+  kSell,
+};
+
 struct MarketDataUpdate {
   std::string_view symbol;
 
@@ -20,9 +25,24 @@ struct MarketDataUpdate {
 struct OrderRequest {
   std::uint64_t sequence_id = 0;
   std::string_view symbol;
+  Side side = Side::kBuy;
 
   double price = 0.0;
   std::uint32_t quantity = 0;
+};
+
+enum class OrderRejectReason {
+  kNone,
+  kInvalidSymbol,
+  kInvalidPrice,
+  kInvalidQuantity,
+  kDuplicateSequence,
+};
+
+struct OrderResponse {
+  std::uint64_t sequence_id = 0;
+  bool accepted = false;
+  OrderRejectReason reject_reason = OrderRejectReason::kNone;
 };
 
 }  // namespace llgw

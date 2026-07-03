@@ -17,8 +17,10 @@ add_compile_options(
 include_directories(include)
 
 add_library(llgw_core
+  src/exchange_simulator.cpp
   src/feed_replay.cpp
   src/market_data_parser.cpp
+  src/order_gateway.cpp
 )
 
 target_include_directories(llgw_core PUBLIC include)
@@ -40,3 +42,15 @@ add_executable(test_feed_replay
 )
 
 target_link_libraries(test_feed_replay PRIVATE llgw_core)
+
+add_executable(test_exchange_simulator
+  tests/test_exchange_simulator.cpp
+)
+
+target_link_libraries(test_exchange_simulator PRIVATE llgw_core)
+
+add_executable(test_order_gateway
+  tests/test_order_gateway.cpp
+)
+
+target_link_libraries(test_order_gateway PRIVATE llgw_core)
