@@ -21,6 +21,7 @@ add_library(llgw_core
   src/feed_replay.cpp
   src/market_data_parser.cpp
   src/order_gateway.cpp
+  src/simple_strategy.cpp
 )
 
 target_include_directories(llgw_core PUBLIC include)
@@ -54,3 +55,15 @@ add_executable(test_order_gateway
 )
 
 target_link_libraries(test_order_gateway PRIVATE llgw_core)
+
+add_executable(test_simple_strategy
+  tests/test_simple_strategy.cpp
+)
+
+target_link_libraries(test_simple_strategy PRIVATE llgw_core)
+
+add_executable(test_end_to_end_order_flow
+  tests/test_end_to_end_order_flow.cpp
+)
+
+target_link_libraries(test_end_to_end_order_flow PRIVATE llgw_core)

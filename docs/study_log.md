@@ -83,3 +83,24 @@ Notes:
 - The simulator does not model fills, order books, matching, partial fills, or live exchange connectivity.
 - The current order path exists to test deterministic order acceptance/rejection behavior.
 - No latency or throughput claims are made yet.
+
+## Day 5
+
+Added deterministic strategy-to-order flow.
+
+Focus areas:
+
+- Added `SimpleStrategy`
+- Strategy observes market-data updates and generates a test buy order when spread meets a configured threshold
+- Added strategy counters for signals seen and orders generated
+- Added strategy unit tests
+- Added end-to-end replay → strategy → order gateway → exchange simulator tests
+- Verified end-to-end order flow with accepted orders
+- Verified replay stops on parse error before later strategy/order processing
+- Updated main demo to use `SimpleStrategy`
+
+Notes:
+
+- The strategy is intentionally simple and not intended to represent alpha.
+- Its purpose is to exercise the system path from feed replay to deterministic order submission.
+- No latency, throughput, profitability, or production-readiness claims are made.

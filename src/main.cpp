@@ -1,30 +1,27 @@
 #include <iostream>
+#include <optional>
 
 #include "llgw/exchange_simulator.hpp"
 #include "llgw/feed_replay.hpp"
 #include "llgw/messages.hpp"
 #include "llgw/order_gateway.hpp"
+#include "llgw/simple_strategy.hpp"
 
 int main() {
   llgw::ExchangeSimulator exchange;
   llgw::OrderGateway gateway(&exchange);
-
-  std::uint64_t next_order_sequence_id = 1;
+  llgw::SimpleStrategy strategy(0.02);
 
   const llgw::FeedReplayResult replay_result = llgw::ReplayMarketDataFile(
       "data/sample_feed.txt", [&](const llgw::MarketDataUpdate& update) {
-        if (update.symbol == "AAPL") {
-          llgw::OrderRequest request{};
-          request.sequence_id = next_order_sequence_id++;
-          request.symbol = update.symbol;
-          request.side = llgw::Side::kBuy;
-          request.price = update.ask_price;
-          request.quantity = 10;
+        const std::optional<llgw::OrderRequest> maybe_order = strategy.OnMarketData(update);
+        if (!maybe_order.has_value()) {
+          return;
+        }
 
-          const llgw::OrderResponse response = gateway.SendOrder(request);
-          if (!response.accepted) {
-            std::cerr << "Order rejected for sequence_id=" << response.sequence_id << "\n";
-          }
+        const llgw::OrderResponse response = gateway.SendOrder(*maybe_order);
+        if (!response.accepted) {
+          std::cerr << "Order rejected for sequence_id=" << response.sequence_id << "\n";
         }
       });
 
@@ -39,6 +36,9 @@ int main() {
   std::cout << "Replay completed successfully\n";
   std::cout << "  lines_read=" << replay_result.lines_read << "\n";
   std::cout << "  updates_parsed=" << replay_result.updates_parsed << "\n";
+  std::cout << "Strategy summary\n";
+  std::cout << "  signals_seen=" << strategy.signals_seen() << "\n";
+  std::cout << "  orders_generated=" << strategy.orders_generated() << "\n";
   std::cout << "Order gateway summary\n";
   std::cout << "  orders_sent=" << gateway.orders_sent() << "\n";
   std::cout << "  orders_accepted=" << gateway.orders_accepted() << "\n";
