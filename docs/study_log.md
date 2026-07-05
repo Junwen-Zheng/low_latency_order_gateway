@@ -104,3 +104,23 @@ Notes:
 - The strategy is intentionally simple and not intended to represent alpha.
 - Its purpose is to exercise the system path from feed replay to deterministic order submission.
 - No latency, throughput, profitability, or production-readiness claims are made.
+
+## Day 6
+
+Added a fixed-size ring buffer component.
+
+Focus areas:
+
+- Added templated `RingBuffer<T, Capacity>`
+- Added push/pop operations
+- Added full/empty/size state tracking
+- Added FIFO ordering tests
+- Added full-buffer rejection tests
+- Added wrap-around ordering tests
+- Added tests with both integer and string values
+
+Notes:
+
+- The current ring buffer is correctness-focused and single-threaded.
+- It is not yet a lock-free or atomic SPSC queue.
+- No latency, throughput, or allocation claims are made yet.

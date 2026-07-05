@@ -67,3 +67,10 @@ add_executable(test_end_to_end_order_flow
 )
 
 target_link_libraries(test_end_to_end_order_flow PRIVATE llgw_core)
+
+
+add_executable(test_ring_buffer
+  tests/test_ring_buffer.cpp
+)
+
+target_link_libraries(test_ring_buffer PRIVATE llgw_core)
