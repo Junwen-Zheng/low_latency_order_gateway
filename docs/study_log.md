@@ -124,3 +124,24 @@ Notes:
 - The current ring buffer is correctness-focused and single-threaded.
 - It is not yet a lock-free or atomic SPSC queue.
 - No latency, throughput, or allocation claims are made yet.
+
+## Day 7
+
+Wired the fixed-size ring buffer into a deterministic order pipeline.
+
+Focus areas:
+
+- Added `OrderPipeline<Capacity>`
+- Pipeline uses `RingBuffer<OrderRequest, Capacity>` for queued order requests
+- Added enqueue/drop/drain counters
+- Added order acceptance/rejection counters at the pipeline level
+- Added unit tests for empty drain, accepted drain, full-buffer rejection, and exchange reject tracking
+- Added end-to-end feed replay → strategy → pipeline → gateway → exchange tests
+- Updated main demo to route strategy-generated orders through the pipeline
+
+Notes:
+
+- The pipeline drains immediately in the main replay callback because `OrderRequest.symbol` is currently a `std::string_view`.
+- This avoids storing symbol views beyond the lifetime of the current replay line.
+- A future asynchronous pipeline should introduce owned or fixed-width symbol storage before queueing across thread/lifetime boundaries.
+- No latency, throughput, lock-free, or production-readiness claims are made.

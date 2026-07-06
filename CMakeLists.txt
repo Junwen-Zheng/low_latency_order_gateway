@@ -74,3 +74,17 @@ add_executable(test_ring_buffer
 )
 
 target_link_libraries(test_ring_buffer PRIVATE llgw_core)
+
+
+add_executable(test_order_pipeline
+  tests/test_order_pipeline.cpp
+)
+
+target_link_libraries(test_order_pipeline PRIVATE llgw_core)
+
+
+add_executable(test_end_to_end_pipeline
+  tests/test_end_to_end_pipeline.cpp
+)
+
+target_link_libraries(test_end_to_end_pipeline PRIVATE llgw_core)

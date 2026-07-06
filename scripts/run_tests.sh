@@ -10,6 +10,8 @@ cmake --build build
 ./build/test_simple_strategy
 ./build/test_end_to_end_order_flow
 ./build/test_ring_buffer
+./build/test_order_pipeline
+./build/test_end_to_end_pipeline
 ./build/llgw
 
-echo "All Day 6 checks passed."
+echo "All Day 7 checks passed."
