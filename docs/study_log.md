@@ -145,3 +145,22 @@ Notes:
 - This avoids storing symbol views beyond the lifetime of the current replay line.
 - A future asynchronous pipeline should introduce owned or fixed-width symbol storage before queueing across thread/lifetime boundaries.
 - No latency, throughput, lock-free, or production-readiness claims are made.
+
+## Day 8
+
+Performed architecture and documentation cleanup.
+
+Focus areas:
+
+- Added docs/architecture.md
+- Added docs/project_status.md
+- Updated README to describe current system flow
+- Documented current components and responsibilities
+- Documented known limitations
+- Documented why symbol lifetime must be fixed before async queueing or benchmarking
+
+Notes:
+
+- No production-readiness or latency claims were added.
+- This was intentionally a repo-polish and explainability stage.
+- The next technical step should be owned or fixed-size symbol storage for queued orders.
