@@ -51,8 +51,9 @@ void TestEndToEndPipelineFlow() {
         }
 
         Expect(pipeline.Enqueue(*maybe_order), "pipeline enqueue should succeed");
-        pipeline.Drain();
       });
+
+  pipeline.Drain();
 
   Expect(replay_result.status == llgw::FeedReplayStatus::kOk, "feed replay should succeed");
   Expect(replay_result.lines_read == 3, "replay should read 3 lines");

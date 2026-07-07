@@ -23,12 +23,7 @@ int main() {
 
         if (!pipeline.Enqueue(*maybe_order)) {
           std::cerr << "Pipeline dropped order due to full buffer\n";
-          return;
         }
-
-        // Drain immediately because OrderRequest currently stores symbol as std::string_view.
-        // This keeps the symbol view within the lifetime of the current replay line.
-        pipeline.Drain();
       });
 
   if (replay_result.status != llgw::FeedReplayStatus::kOk) {
@@ -38,6 +33,8 @@ int main() {
     }
     return 1;
   }
+
+  pipeline.Drain();
 
   std::cout << "Replay completed successfully\n";
   std::cout << "  lines_read=" << replay_result.lines_read << "\n";

@@ -1,7 +1,5 @@
 #include "llgw/simple_strategy.hpp"
 
-#include <cmath>
-
 namespace llgw {
 namespace {
 
@@ -21,7 +19,11 @@ std::optional<OrderRequest> SimpleStrategy::OnMarketData(const MarketDataUpdate&
 
   OrderRequest request{};
   request.sequence_id = next_sequence_id_++;
-  request.symbol = update.symbol;
+
+  if (!request.symbol.Assign(update.symbol)) {
+    return std::nullopt;
+  }
+
   request.side = Side::kBuy;
   request.price = update.ask_price;
   request.quantity = 10;

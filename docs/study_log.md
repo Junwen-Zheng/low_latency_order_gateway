@@ -164,3 +164,22 @@ Notes:
 - No production-readiness or latency claims were added.
 - This was intentionally a repo-polish and explainability stage.
 - The next technical step should be owned or fixed-size symbol storage for queued orders.
+
+## Day 9
+
+Fixed queued order symbol lifetime with owned fixed-size symbol storage.
+
+Focus areas:
+
+- Added `FixedSymbol`
+- Replaced `OrderRequest.symbol` from `std::string_view` with owned `FixedSymbol`
+- Added tests for valid, empty, too-long, and max-length symbols
+- Updated `SimpleStrategy` to copy market-data symbols into owned order symbols
+- Updated main demo to enqueue during replay and drain the order pipeline after replay completes
+- Updated end-to-end pipeline test to validate queued order lifetime across replay callbacks
+
+Notes:
+
+- `MarketDataUpdate.symbol` is still a `std::string_view` into the feed line.
+- `OrderRequest.symbol` is now owned and safe to store in the ring-buffer-backed pipeline.
+- This prepares the project for future async/pipeline work without making latency or production-readiness claims.

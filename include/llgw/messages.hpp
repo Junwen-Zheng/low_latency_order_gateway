@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <string_view>
 
+#include "llgw/fixed_symbol.hpp"
+
 namespace llgw {
 
 enum class Side {
@@ -24,7 +26,7 @@ struct MarketDataUpdate {
 
 struct OrderRequest {
   std::uint64_t sequence_id = 0;
-  std::string_view symbol;
+  FixedSymbol symbol;
   Side side = Side::kBuy;
 
   double price = 0.0;

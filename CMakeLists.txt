@@ -88,3 +88,10 @@ add_executable(test_end_to_end_pipeline
 )
 
 target_link_libraries(test_end_to_end_pipeline PRIVATE llgw_core)
+
+
+add_executable(test_fixed_symbol
+  tests/test_fixed_symbol.cpp
+)
+
+target_link_libraries(test_fixed_symbol PRIVATE llgw_core)
