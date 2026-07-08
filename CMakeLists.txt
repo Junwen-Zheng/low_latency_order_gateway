@@ -95,3 +95,10 @@ add_executable(test_fixed_symbol
 )
 
 target_link_libraries(test_fixed_symbol PRIVATE llgw_core)
+
+
+add_executable(bench_parser
+  benchmarks/bench_parser.cpp
+)
+
+target_link_libraries(bench_parser PRIVATE llgw_core)

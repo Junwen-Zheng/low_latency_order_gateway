@@ -85,3 +85,11 @@ scripts/           helper scripts
 ## Next Step
 
 The next architecture step is to replace queued order symbols with owned or fixed-size symbol storage before introducing asynchronous queueing or benchmarking.
+
+## Benchmarks
+
+A basic parser benchmark smoke harness is available:
+
+./scripts/run_benchmarks.sh
+
+The benchmark output is local and machine-dependent. It should not be interpreted as a production latency claim. See docs/benchmark_methodology.md for limitations and reporting rules.

@@ -183,3 +183,23 @@ Notes:
 - `MarketDataUpdate.symbol` is still a `std::string_view` into the feed line.
 - `OrderRequest.symbol` is now owned and safe to store in the ring-buffer-backed pipeline.
 - This prepares the project for future async/pipeline work without making latency or production-readiness claims.
+
+## Day 10
+
+Added a basic parser benchmark smoke harness and benchmark methodology documentation.
+
+Focus areas:
+
+- Added benchmarks/bench_parser.cpp
+- Added scripts/run_benchmarks.sh
+- Added docs/benchmark_methodology.md
+- Added benchmark target to CMake
+- Updated README with benchmark instructions and limitations
+- Kept benchmark language conservative and non-claim-based
+
+Notes:
+
+- The benchmark uses std::chrono::steady_clock and a fixed parser input.
+- The output is useful as a local smoke measurement only.
+- No production latency, exchange-grade, lock-free, or ultra-low-latency claims are made.
+- Benchmark results should not be used in resume bullets until methodology is stronger and limitations are clearly documented.
