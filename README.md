@@ -92,4 +92,12 @@ A basic parser benchmark smoke harness is available:
 
 ./scripts/run_benchmarks.sh
 
+Configured benchmark run:
+
+./scripts/run_benchmarks.sh --warmup 10000 --iterations 100000 --trials 5
+
+CSV output:
+
+./scripts/run_benchmarks.sh --warmup 10000 --iterations 100000 --trials 5 --csv benchmark_results/parser.csv
+
 The benchmark output is local and machine-dependent. It should not be interpreted as a production latency claim. See docs/benchmark_methodology.md for limitations and reporting rules.

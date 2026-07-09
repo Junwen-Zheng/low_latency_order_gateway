@@ -6,3 +6,4 @@ cmake-build-*/
 *.o
 *.out
 *.log
+benchmark_results/*.csv

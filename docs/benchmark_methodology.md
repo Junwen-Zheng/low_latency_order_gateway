@@ -2,13 +2,13 @@
 
 ## Current Status
 
-This project now includes a basic parser benchmark smoke harness.
+This project includes a basic parser benchmark smoke harness.
 
-The benchmark is intentionally early-stage. It is useful for checking that a measurement path exists, but the results should not be treated as a stable performance claim.
+The benchmark is useful for checking that a repeatable measurement path exists, but the results should not be treated as stable production latency claims.
 
-## Current Benchmark
+## Benchmark Executable
 
-The current benchmark executable is:
+The benchmark executable is:
 
 bench_parser
 
@@ -16,11 +16,34 @@ It repeatedly parses a fixed-format market-data line:
 
 AAPL,192.10,100,192.12,200,1710000000123456789
 
+## How To Run
+
+Default run:
+
+./scripts/run_benchmarks.sh
+
+Configured run:
+
+./scripts/run_benchmarks.sh --warmup 10000 --iterations 100000 --trials 5
+
+CSV output:
+
+./scripts/run_benchmarks.sh --warmup 10000 --iterations 100000 --trials 5 --csv benchmark_results/parser.csv
+
+## Reported Fields
+
 The benchmark reports:
 
 - warmup iterations
 - measured iterations
-- total elapsed nanoseconds
+- trial count
+- compiler name
+- compiler version
+- C++ standard macro
+- build mode
+- whether std::chrono::steady_clock is steady
+- hardware concurrency
+- total elapsed nanoseconds per trial
 - min latency
 - p50 latency
 - p95 latency
@@ -29,12 +52,6 @@ The benchmark reports:
 - checksum
 
 The checksum exists to make sure parsed results are consumed and the parser call is not trivially optimized away.
-
-## How To Run
-
-Run:
-
-./scripts/run_benchmarks.sh
 
 ## Current Limitations
 
@@ -51,8 +68,9 @@ Known limitations:
 - Does not measure allocations
 - Does not compare multiple parser implementations
 - Does not test realistic feed variety
-- Does not report compiler version or CPU model automatically
-- Does not run repeated trials across clean system states
+- Does not automatically record CPU model or operating system details
+- Does not run under a formal benchmarking framework
+- Per-iteration timing includes measurement overhead
 
 ## Rules For Reporting Results
 
@@ -67,6 +85,7 @@ Do not write claims such as:
 Acceptable wording:
 
 - Added a local parser benchmark smoke harness.
+- Added configurable warmup, iteration count, repeated trials, and CSV output.
 - Recorded local p50/p95/p99 parser timings under a documented, limited setup.
 - Results are machine-dependent and not presented as production latency claims.
 
@@ -74,11 +93,11 @@ Acceptable wording:
 
 Before using benchmark numbers in a resume or README, add:
 
-1. machine and compiler metadata
-2. repeated runs
-3. CSV output
-4. benchmark configuration parameters
-5. comparison between parser variants
-6. explicit warmup and measurement notes
-7. allocation measurement or instrumentation
-8. CPU pinning notes, if running on Linux
+1. machine and OS metadata
+2. repeated benchmark result files
+3. benchmark input variety
+4. comparison between parser variants
+5. allocation measurement or instrumentation
+6. CPU pinning notes, if running on Linux
+7. clearer separation between benchmark timing overhead and parser cost
+8. CI smoke run for benchmark buildability, not performance gates

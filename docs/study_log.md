@@ -203,3 +203,24 @@ Notes:
 - The output is useful as a local smoke measurement only.
 - No production latency, exchange-grade, lock-free, or ultra-low-latency claims are made.
 - Benchmark results should not be used in resume bullets until methodology is stronger and limitations are clearly documented.
+
+## Day 11
+
+Improved parser benchmark methodology.
+
+Focus areas:
+
+- Added configurable warmup iteration count
+- Added configurable measured iteration count
+- Added repeated benchmark trials
+- Added optional CSV output
+- Added benchmark metadata for compiler, compiler version, C++ standard macro, build mode, steady clock behavior, and hardware concurrency
+- Updated benchmark methodology documentation
+- Updated README benchmark usage
+- Ignored local benchmark CSV outputs
+
+Notes:
+
+- The benchmark remains a smoke harness, not a production latency claim.
+- Per-iteration timing still includes measurement overhead.
+- Results are local, machine-dependent, and should not be used as resume claims yet.
