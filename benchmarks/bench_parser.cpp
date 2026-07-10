@@ -15,10 +15,16 @@
 
 namespace {
 
+struct BenchmarkInput {
+  std::string name;
+  std::string line;
+};
+
 struct BenchmarkConfig {
   std::size_t warmup_iterations = 10000;
   std::size_t measured_iterations = 100000;
   std::size_t trials = 5;
+  std::string input_set = "single";
   std::optional<std::string> csv_path;
 };
 
@@ -73,7 +79,8 @@ bool ParseSizeT(std::string_view value, std::size_t* output) {
 
 void PrintUsage(const char* program) {
   std::cerr << "Usage: " << program
-            << " [--warmup N] [--iterations N] [--trials N] [--csv PATH]\n";
+            << " [--warmup N] [--iterations N] [--trials N]"
+            << " [--input-set single|varied] [--csv PATH]\n";
 }
 
 bool ParseArgs(int argc, char** argv, BenchmarkConfig* config) {
@@ -112,6 +119,17 @@ bool ParseArgs(int argc, char** argv, BenchmarkConfig* config) {
         std::cerr << "Invalid --trials value\n";
         return false;
       }
+    } else if (arg == "--input-set") {
+      const auto value = require_value(arg);
+      if (!value.has_value()) {
+        return false;
+      }
+
+      config->input_set = std::string(*value);
+      if (config->input_set != "single" && config->input_set != "varied") {
+        std::cerr << "Invalid --input-set value. Expected single or varied.\n";
+        return false;
+      }
     } else if (arg == "--csv") {
       const auto value = require_value(arg);
       if (!value.has_value() || value->empty()) {
@@ -130,6 +148,25 @@ bool ParseArgs(int argc, char** argv, BenchmarkConfig* config) {
   }
 
   return true;
+}
+
+std::vector<BenchmarkInput> BuildInputs(const std::string& input_set) {
+  if (input_set == "single") {
+    return {
+        {"single_aapl", "AAPL,192.10,100,192.12,200,1710000000123456789"},
+    };
+  }
+
+  return {
+      {"aapl_tight", "AAPL,192.10,100,192.12,200,1710000000123456789"},
+      {"msft_locked", "MSFT,420.50,300,420.50,100,1710000001123456789"},
+      {"nvda_wide", "NVDA,905.25,50,905.75,75,1710000002123456789"},
+      {"tsla_small_size", "TSLA,175.01,1,175.05,2,1710000003123456789"},
+      {"amzn_large_size", "AMZN,185.10,10000,185.11,12000,1710000004123456789"},
+      {"meta_decimal", "META,510.99,250,511.03,225,1710000005123456789"},
+      {"goog_high_price", "GOOG,2890.12,10,2890.50,12,1710000006123456789"},
+      {"spy_short_symbol", "SPY,540.01,500,540.02,600,1710000007123456789"},
+  };
 }
 
 const char* CompilerName() {
@@ -166,31 +203,68 @@ const char* BuildMode() {
 #endif
 }
 
+const char* OperatingSystem() {
+#if defined(__APPLE__)
+  return "apple";
+#elif defined(__linux__)
+  return "linux";
+#elif defined(_WIN32)
+  return "windows";
+#else
+  return "unknown";
+#endif
+}
+
+const char* Architecture() {
+#if defined(__aarch64__) || defined(_M_ARM64)
+  return "arm64";
+#elif defined(__x86_64__) || defined(_M_X64)
+  return "x86_64";
+#elif defined(__arm__) || defined(_M_ARM)
+  return "arm";
+#elif defined(__i386__) || defined(_M_IX86)
+  return "x86";
+#else
+  return "unknown";
+#endif
+}
+
 void PrintMetadata() {
   std::cout << "Benchmark metadata\n";
   std::cout << "  compiler=" << CompilerName() << "\n";
   std::cout << "  compiler_version=" << CompilerVersion() << "\n";
   std::cout << "  cplusplus=" << __cplusplus << "\n";
   std::cout << "  build_mode=" << BuildMode() << "\n";
+  std::cout << "  operating_system=" << OperatingSystem() << "\n";
+  std::cout << "  architecture=" << Architecture() << "\n";
   std::cout << "  steady_clock_is_steady="
             << (std::chrono::steady_clock::is_steady ? "true" : "false") << "\n";
   std::cout << "  hardware_concurrency=" << std::thread::hardware_concurrency() << "\n";
 }
 
-TrialResult RunTrial(std::size_t trial_index, const BenchmarkConfig& config) {
-  constexpr std::string_view line = "AAPL,192.10,100,192.12,200,1710000000123456789";
+std::uint64_t UpdateChecksum(std::uint64_t checksum, const llgw::MarketDataUpdate& update) {
+  checksum += update.bid_size;
+  checksum += update.ask_size;
+  checksum += static_cast<std::uint64_t>(update.symbol.size());
+  checksum ^= update.exchange_ts_ns;
+  return checksum;
+}
 
+TrialResult RunTrial(std::size_t trial_index,
+                     const BenchmarkConfig& config,
+                     const std::vector<BenchmarkInput>& inputs) {
   TrialResult trial{};
   trial.trial_index = trial_index;
 
   for (std::size_t i = 0; i < config.warmup_iterations; ++i) {
-    const llgw::ParseResult result = llgw::ParseMarketDataLine(line);
+    const BenchmarkInput& input = inputs[i % inputs.size()];
+    const llgw::ParseResult result = llgw::ParseMarketDataLine(input.line);
     if (result.status != llgw::ParseStatus::kOk) {
-      std::cerr << "Warmup parse failed\n";
+      std::cerr << "Warmup parse failed for input " << input.name << "\n";
       std::exit(1);
     }
 
-    trial.checksum += result.update.bid_size;
+    trial.checksum = UpdateChecksum(trial.checksum, result.update);
   }
 
   std::vector<std::uint64_t> samples_ns;
@@ -199,16 +273,18 @@ TrialResult RunTrial(std::size_t trial_index, const BenchmarkConfig& config) {
   const auto total_start = std::chrono::steady_clock::now();
 
   for (std::size_t i = 0; i < config.measured_iterations; ++i) {
+    const BenchmarkInput& input = inputs[i % inputs.size()];
+
     const auto start = std::chrono::steady_clock::now();
-    const llgw::ParseResult result = llgw::ParseMarketDataLine(line);
+    const llgw::ParseResult result = llgw::ParseMarketDataLine(input.line);
     const auto end = std::chrono::steady_clock::now();
 
     if (result.status != llgw::ParseStatus::kOk) {
-      std::cerr << "Measured parse failed\n";
+      std::cerr << "Measured parse failed for input " << input.name << "\n";
       std::exit(1);
     }
 
-    trial.checksum += result.update.bid_size;
+    trial.checksum = UpdateChecksum(trial.checksum, result.update);
     samples_ns.push_back(ToNs(end - start));
   }
 
@@ -239,6 +315,7 @@ void PrintTrial(const TrialResult& trial) {
 
 bool WriteCsv(const std::string& path,
               const BenchmarkConfig& config,
+              const std::vector<BenchmarkInput>& inputs,
               const std::vector<TrialResult>& trials) {
   std::ofstream file(path);
   if (!file) {
@@ -246,11 +323,13 @@ bool WriteCsv(const std::string& path,
     return false;
   }
 
-  file << "trial,warmup_iterations,measured_iterations,total_elapsed_ns,"
-          "min_ns,p50_ns,p95_ns,p99_ns,max_ns,checksum\n";
+  file << "trial,input_set,input_count,warmup_iterations,measured_iterations,"
+          "total_elapsed_ns,min_ns,p50_ns,p95_ns,p99_ns,max_ns,checksum\n";
 
   for (const TrialResult& trial : trials) {
     file << trial.trial_index << ','
+         << config.input_set << ','
+         << inputs.size() << ','
          << config.warmup_iterations << ','
          << config.measured_iterations << ','
          << trial.total_elapsed_ns << ','
@@ -274,11 +353,15 @@ int main(int argc, char** argv) {
     return 1;
   }
 
+  const std::vector<BenchmarkInput> inputs = BuildInputs(config.input_set);
+
   std::cout << "Parser benchmark smoke run\n";
   std::cout << "  warning: local measurement only, not a performance claim\n";
   std::cout << "  warmup_iterations=" << config.warmup_iterations << "\n";
   std::cout << "  measured_iterations=" << config.measured_iterations << "\n";
   std::cout << "  trials=" << config.trials << "\n";
+  std::cout << "  input_set=" << config.input_set << "\n";
+  std::cout << "  input_count=" << inputs.size() << "\n";
 
   PrintMetadata();
 
@@ -286,13 +369,13 @@ int main(int argc, char** argv) {
   trials.reserve(config.trials);
 
   for (std::size_t trial_index = 1; trial_index <= config.trials; ++trial_index) {
-    TrialResult trial = RunTrial(trial_index, config);
+    TrialResult trial = RunTrial(trial_index, config, inputs);
     PrintTrial(trial);
     trials.push_back(trial);
   }
 
   if (config.csv_path.has_value()) {
-    if (!WriteCsv(*config.csv_path, config, trials)) {
+    if (!WriteCsv(*config.csv_path, config, inputs, trials)) {
       return 1;
     }
 

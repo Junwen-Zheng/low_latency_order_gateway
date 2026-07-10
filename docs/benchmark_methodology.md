@@ -2,7 +2,7 @@
 
 ## Current Status
 
-This project includes a basic parser benchmark smoke harness.
+This project includes a parser benchmark smoke harness.
 
 The benchmark is useful for checking that a repeatable measurement path exists, but the results should not be treated as stable production latency claims.
 
@@ -12,9 +12,14 @@ The benchmark executable is:
 
 bench_parser
 
-It repeatedly parses a fixed-format market-data line:
+It supports two input sets:
 
-AAPL,192.10,100,192.12,200,1710000000123456789
+- single
+- varied
+
+The single input set repeatedly parses one fixed-format market-data line.
+
+The varied input set cycles through multiple valid market-data lines with different symbols, prices, sizes, and spreads.
 
 ## How To Run
 
@@ -22,13 +27,17 @@ Default run:
 
 ./scripts/run_benchmarks.sh
 
-Configured run:
+Configured single-input run:
 
-./scripts/run_benchmarks.sh --warmup 10000 --iterations 100000 --trials 5
+./scripts/run_benchmarks.sh --warmup 10000 --iterations 100000 --trials 5 --input-set single
+
+Configured varied-input run:
+
+./scripts/run_benchmarks.sh --warmup 10000 --iterations 100000 --trials 5 --input-set varied
 
 CSV output:
 
-./scripts/run_benchmarks.sh --warmup 10000 --iterations 100000 --trials 5 --csv benchmark_results/parser.csv
+./scripts/run_benchmarks.sh --warmup 10000 --iterations 100000 --trials 5 --input-set varied --csv benchmark_results/parser_varied.csv
 
 ## Reported Fields
 
@@ -37,10 +46,14 @@ The benchmark reports:
 - warmup iterations
 - measured iterations
 - trial count
+- input set
+- input count
 - compiler name
 - compiler version
 - C++ standard macro
 - build mode
+- operating system macro
+- architecture macro
 - whether std::chrono::steady_clock is steady
 - hardware concurrency
 - total elapsed nanoseconds per trial
@@ -61,14 +74,15 @@ Known limitations:
 
 - Runs on a normal developer machine
 - Uses std::chrono::steady_clock
-- Measures one fixed parser input
+- Measures a small set of valid parser inputs
 - Does not pin CPU cores
 - Does not control CPU frequency scaling
 - Does not isolate the process
 - Does not measure allocations
 - Does not compare multiple parser implementations
-- Does not test realistic feed variety
-- Does not automatically record CPU model or operating system details
+- Does not test malformed input performance
+- Does not test realistic exchange feed distributions
+- Does not automatically record detailed CPU model
 - Does not run under a formal benchmarking framework
 - Per-iteration timing includes measurement overhead
 
@@ -85,7 +99,7 @@ Do not write claims such as:
 Acceptable wording:
 
 - Added a local parser benchmark smoke harness.
-- Added configurable warmup, iteration count, repeated trials, and CSV output.
+- Added configurable warmup, iteration count, repeated trials, CSV output, metadata, and input-set selection.
 - Recorded local p50/p95/p99 parser timings under a documented, limited setup.
 - Results are machine-dependent and not presented as production latency claims.
 
@@ -93,9 +107,9 @@ Acceptable wording:
 
 Before using benchmark numbers in a resume or README, add:
 
-1. machine and OS metadata
-2. repeated benchmark result files
-3. benchmark input variety
+1. detailed machine and OS metadata
+2. repeated benchmark result files across clean system states
+3. benchmark input distributions closer to real feeds
 4. comparison between parser variants
 5. allocation measurement or instrumentation
 6. CPU pinning notes, if running on Linux

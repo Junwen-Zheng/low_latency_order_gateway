@@ -224,3 +224,24 @@ Notes:
 - The benchmark remains a smoke harness, not a production latency claim.
 - Per-iteration timing still includes measurement overhead.
 - Results are local, machine-dependent, and should not be used as resume claims yet.
+
+## Day 12
+
+Added benchmark input variety and additional benchmark metadata.
+
+Focus areas:
+
+- Added benchmark input-set selection with `--input-set single` and `--input-set varied`
+- Added a varied valid-input benchmark set with multiple symbols, prices, sizes, and spreads
+- Added operating system macro metadata
+- Added architecture macro metadata
+- Added input set and input count to benchmark output
+- Added input set and input count to CSV output
+- Updated benchmark methodology documentation
+- Updated README benchmark examples
+
+Notes:
+
+- The benchmark remains a local smoke harness, not a production latency claim.
+- The varied input set improves coverage but is still not a realistic exchange-feed distribution.
+- Per-iteration timing still includes measurement overhead.
