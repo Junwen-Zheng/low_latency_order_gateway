@@ -4,22 +4,59 @@
 
 This project includes a parser benchmark smoke harness.
 
-The benchmark is useful for checking that a repeatable measurement path exists, but the results should not be treated as stable production latency claims.
+The harness exists to develop a documented and repeatable measurement process. Its output is not presented as production, exchange-grade, or hardware-independent latency.
 
-## Benchmark Executable
+## Why Batched Timing Is Used
 
-The benchmark executable is:
+Earlier versions timed every parser invocation with a separate pair of steady-clock calls.
 
-bench_parser
+That approach produced zero-nanosecond samples and inconsistent differences between input sets because timer resolution and clock-call overhead were significant relative to the measured operation.
 
-It supports two input sets:
+The current harness groups multiple parser operations into each timed batch.
+
+For every batch:
+
+1. The clock is read.
+2. Multiple parser operations are executed.
+3. The clock is read again.
+4. Elapsed time is divided by operations in that batch.
+
+This reduces, but does not eliminate, timer overhead and quantization.
+
+## Baseline Measurement
+
+Each trial also measures a baseline loop.
+
+The baseline performs input selection and checksum work without calling the parser.
+
+Baseline results are reported alongside parser results, but they are not automatically subtracted.
+
+Automatic subtraction is avoided because the baseline is not a perfect model of parser benchmark overhead. Subtracting noisy measurements could create misleading or negative estimates.
+
+## Trial Ordering
+
+Odd-numbered trials run:
+
+baseline then parser
+
+Even-numbered trials run:
+
+parser then baseline
+
+Alternating order reduces consistent warm-cache or run-order bias, but it does not eliminate environmental noise.
+
+## Input Sets
+
+The benchmark supports:
 
 - single
 - varied
 
-The single input set repeatedly parses one fixed-format market-data line.
+The single input set repeatedly parses one valid line.
 
-The varied input set cycles through multiple valid market-data lines with different symbols, prices, sizes, and spreads.
+The varied input set cycles through eight valid lines with different symbols, prices, sizes, and spreads.
+
+The varied set is broader than one fixed line but is not intended to model a realistic exchange-feed distribution.
 
 ## How To Run
 
@@ -27,91 +64,80 @@ Default run:
 
 ./scripts/run_benchmarks.sh
 
-Configured single-input run:
+Configured batched run:
 
-./scripts/run_benchmarks.sh --warmup 10000 --iterations 100000 --trials 5 --input-set single
-
-Configured varied-input run:
-
-./scripts/run_benchmarks.sh --warmup 10000 --iterations 100000 --trials 5 --input-set varied
+./scripts/run_benchmarks.sh --warmup 6400 --iterations 64000 --trials 3 --batch-size 64 --input-set varied
 
 CSV output:
 
-./scripts/run_benchmarks.sh --warmup 10000 --iterations 100000 --trials 5 --input-set varied --csv benchmark_results/parser_varied.csv
+./scripts/run_benchmarks.sh --warmup 6400 --iterations 64000 --trials 3 --batch-size 64 --input-set varied --csv benchmark_results/parser_batched.csv
 
-## Reported Fields
+## Reported Information
 
-The benchmark reports:
+The harness reports:
 
 - warmup iterations
-- measured iterations
+- measured parser operations
 - trial count
-- input set
-- input count
-- compiler name
-- compiler version
+- batch size
+- timed batch count
+- input set and input count
+- compiler and compiler version
 - C++ standard macro
 - build mode
-- operating system macro
+- operating-system macro
 - architecture macro
-- whether std::chrono::steady_clock is steady
+- steady-clock property
 - hardware concurrency
-- total elapsed nanoseconds per trial
-- min latency
-- p50 latency
-- p95 latency
-- p99 latency
-- max latency
+- clock-pair timing distribution
+- baseline nanoseconds per operation
+- parser nanoseconds per operation
+- total baseline and parser elapsed time
 - checksum
-
-The checksum exists to make sure parsed results are consumed and the parser call is not trivially optimized away.
 
 ## Current Limitations
 
-The current benchmark is not enough to claim production-grade latency.
+Known limitations include:
 
-Known limitations:
+- normal developer-machine execution
+- no CPU affinity
+- no frequency-scaling control
+- no process isolation
+- no detailed CPU model
+- no allocation instrumentation
+- no hardware performance counters
+- no formal benchmark framework
+- no realistic feed distribution
+- no malformed-input benchmark
+- remaining clock and loop overhead
+- operating-system scheduling noise
+- nanosecond values derived from steady-clock duration conversion
 
-- Runs on a normal developer machine
-- Uses std::chrono::steady_clock
-- Measures a small set of valid parser inputs
-- Does not pin CPU cores
-- Does not control CPU frequency scaling
-- Does not isolate the process
-- Does not measure allocations
-- Does not compare multiple parser implementations
-- Does not test malformed input performance
-- Does not test realistic exchange feed distributions
-- Does not automatically record detailed CPU model
-- Does not run under a formal benchmarking framework
-- Per-iteration timing includes measurement overhead
+## Reporting Rules
 
-## Rules For Reporting Results
-
-Do not write claims such as:
+Do not describe these results as:
 
 - ultra-low latency
-- production-grade
-- exchange-grade
+- production-grade latency
+- exchange-grade latency
 - lock-free performance
-- beats professional systems
+- a comparison with professional trading systems
 
-Acceptable wording:
+Acceptable descriptions include:
 
-- Added a local parser benchmark smoke harness.
-- Added configurable warmup, iteration count, repeated trials, CSV output, metadata, and input-set selection.
-- Recorded local p50/p95/p99 parser timings under a documented, limited setup.
-- Results are machine-dependent and not presented as production latency claims.
+- implemented a batched local parser benchmark harness
+- added repeated trials, input sets, metadata, CSV output, clock-pair reporting, and baseline measurements
+- documented measurement limitations and avoided unsupported performance claims
 
-## Next Methodology Improvements
+## Future Improvements
 
-Before using benchmark numbers in a resume or README, add:
+Potential next steps include:
 
-1. detailed machine and OS metadata
-2. repeated benchmark result files across clean system states
-3. benchmark input distributions closer to real feeds
-4. comparison between parser variants
-5. allocation measurement or instrumentation
-6. CPU pinning notes, if running on Linux
-7. clearer separation between benchmark timing overhead and parser cost
-8. CI smoke run for benchmark buildability, not performance gates
+1. detailed CPU and OS-version metadata
+2. benchmark runs under a formal framework
+3. Linux CPU-affinity documentation
+4. allocation instrumentation
+5. realistic input distributions
+6. malformed-input measurements
+7. separate throughput-oriented timing
+8. CI benchmark build-and-smoke verification without performance thresholds

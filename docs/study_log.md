@@ -245,3 +245,26 @@ Notes:
 - The benchmark remains a local smoke harness, not a production latency claim.
 - The varied input set improves coverage but is still not a realistic exchange-feed distribution.
 - Per-iteration timing still includes measurement overhead.
+
+## Day 13
+
+Replaced per-operation parser timing with batched timing and explicit benchmark calibration information.
+
+Focus areas:
+
+- Added configurable batch size with `--batch-size`
+- Timed multiple parser operations per clock interval
+- Reported latency as nanoseconds per operation for each timed batch
+- Added a separate baseline loop
+- Kept baseline and parser results separate instead of automatically subtracting them
+- Added clock-pair timing distribution
+- Alternated parser and baseline ordering across trials
+- Added batch and baseline fields to CSV output
+- Updated README and benchmark methodology documentation
+- Replaced the stale day-specific test completion message with a generic repository check message
+
+Notes:
+
+- Batched timing reduces timer quantization and per-operation clock overhead.
+- The baseline is not a perfect overhead estimate and is not subtracted automatically.
+- Results remain local smoke measurements rather than production latency claims.

@@ -88,20 +88,22 @@ The next architecture step is to replace queued order symbols with owned or fixe
 
 ## Benchmarks
 
-A basic parser benchmark smoke harness is available:
+The project includes a batched parser benchmark smoke harness.
 
-./scripts/run_benchmarks.sh
+Example single-input run:
 
-Configured single-input benchmark run:
+./scripts/run_benchmarks.sh --warmup 6400 --iterations 64000 --trials 3 --batch-size 64 --input-set single
 
-./scripts/run_benchmarks.sh --warmup 10000 --iterations 100000 --trials 5 --input-set single
+Example varied-input run:
 
-Configured varied-input benchmark run:
+./scripts/run_benchmarks.sh --warmup 6400 --iterations 64000 --trials 3 --batch-size 64 --input-set varied
 
-./scripts/run_benchmarks.sh --warmup 10000 --iterations 100000 --trials 5 --input-set varied
+Example CSV output:
 
-CSV output:
+./scripts/run_benchmarks.sh --warmup 6400 --iterations 64000 --trials 3 --batch-size 64 --input-set varied --csv benchmark_results/parser_batched.csv
 
-./scripts/run_benchmarks.sh --warmup 10000 --iterations 100000 --trials 5 --input-set varied --csv benchmark_results/parser_varied.csv
+The harness reports batched parser timing, a separate baseline loop, clock-pair timing, repeated trials, and environment metadata.
 
-The benchmark output is local and machine-dependent. It should not be interpreted as a production latency claim. See docs/benchmark_methodology.md for limitations and reporting rules.
+The baseline is not automatically subtracted because it is not a perfect model of benchmark overhead.
+
+Results are local and machine-dependent and should not be interpreted as production latency claims. See docs/benchmark_methodology.md.

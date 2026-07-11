@@ -15,4 +15,4 @@ cmake --build build
 ./build/test_end_to_end_pipeline
 ./build/llgw
 
-echo "All Day 9 checks passed."
+echo "All repository checks passed."
