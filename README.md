@@ -105,3 +105,21 @@ Example CSV output:
 The first measured trial remains visible but is excluded from a separate steady-state candidate summary. The harness also reports a separate baseline loop, clock-pair timing, timed parser throughput, repeated trials, and environment metadata.
 
 Results are local and machine-dependent and should not be interpreted as production latency or throughput claims. See docs/benchmark_methodology.md.
+
+### In-Memory End-to-End Path Benchmark
+
+A separate benchmark measures:
+
+text line → parser → strategy → order pipeline → gateway → exchange simulator
+
+Mixed workload:
+
+./scripts/run_end_to_end_benchmark.sh --stabilization-iterations 100000 --warmup 6400 --iterations 64000 --trials 5 --batch-size 64 --workload mixed
+
+All-orders workload:
+
+./scripts/run_end_to_end_benchmark.sh --stabilization-iterations 100000 --warmup 6400 --iterations 64000 --trials 5 --batch-size 64 --workload all-orders
+
+The benchmark excludes file I/O, feed replay, networking, and live exchange behavior. It validates system counters and reports local timed events per second, not production throughput.
+
+See docs/end_to_end_benchmark_methodology.md.

@@ -291,3 +291,30 @@ Notes:
 - Stabilization reduces but does not eliminate cold-start, CPU-frequency, thermal, or scheduling effects.
 - Timed operations per second is derived only from measured parser-batch duration and is not an end-to-end throughput claim.
 - Raw first-trial data remains available rather than being silently discarded.
+
+## Day 15
+
+Added a separate in-memory end-to-end system-path benchmark.
+
+Focus areas:
+
+- Added `benchmarks/bench_end_to_end.cpp`
+- Added `scripts/run_end_to_end_benchmark.sh`
+- Added `docs/end_to_end_benchmark_methodology.md`
+- Added the `bench_end_to_end` CMake target
+- Measured text parsing through strategy, order pipeline, gateway, and exchange simulation
+- Added `mixed` and `all-orders` workloads
+- Added process stabilization and first-trial labeling
+- Added batched per-event timing
+- Added separate baseline measurements without automatic subtraction
+- Added timed events-per-second and orders-per-event fields
+- Added pipeline, gateway, and strategy invariant validation
+- Added CSV output
+- Updated README benchmark documentation
+
+Notes:
+
+- File I/O and `FeedReplay` are intentionally excluded.
+- Timed events per second is not file-replay, network, live-exchange, or production throughput.
+- Parser microbenchmark results remain separate from system-path benchmark results.
+- No production-readiness or latency claims are made.

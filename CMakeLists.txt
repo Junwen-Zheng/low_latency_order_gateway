@@ -102,3 +102,10 @@ add_executable(bench_parser
 )
 
 target_link_libraries(bench_parser PRIVATE llgw_core)
+
+
+add_executable(bench_end_to_end
+  benchmarks/bench_end_to_end.cpp
+)
+
+target_link_libraries(bench_end_to_end PRIVATE llgw_core)
