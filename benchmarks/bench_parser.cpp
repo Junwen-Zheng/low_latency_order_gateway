@@ -10,6 +10,7 @@
 #include <string>
 #include <string_view>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #include "llgw/market_data_parser.hpp"
@@ -26,6 +27,7 @@ struct BenchmarkConfig {
   std::size_t measured_iterations = 100000;
   std::size_t trials = 5;
   std::size_t batch_size = 64;
+  std::size_t stabilization_iterations = 100000;
   std::string input_set = "single";
   std::optional<std::string> csv_path;
 };
@@ -52,6 +54,11 @@ struct ClockPairResult {
   std::uint64_t max_ns = 0;
 };
 
+struct StabilizationResult {
+  std::uint64_t elapsed_ns = 0;
+  std::uint64_t checksum = 0;
+};
+
 struct TrialResult {
   std::size_t trial_index = 0;
   std::size_t timed_batches = 0;
@@ -61,8 +68,17 @@ struct TrialResult {
 
   std::uint64_t parser_total_elapsed_ns = 0;
   TimingDistribution parser;
+  double parser_timed_ops_per_second = 0.0;
 
   std::uint64_t checksum = 0;
+};
+
+struct CrossTrialSummary {
+  std::size_t trial_count = 0;
+  double parser_p50_median_ns_per_op = 0.0;
+  double parser_p95_median_ns_per_op = 0.0;
+  double parser_p99_median_ns_per_op = 0.0;
+  double parser_timed_ops_per_second_median = 0.0;
 };
 
 std::uint64_t ToNs(std::chrono::steady_clock::duration duration) {
@@ -143,7 +159,8 @@ void PrintUsage(const char* program) {
   std::cerr
       << "Usage: " << program
       << " [--warmup N] [--iterations N] [--trials N]"
-      << " [--batch-size N] [--input-set single|varied] [--csv PATH]\n";
+      << " [--batch-size N] [--stabilization-iterations N]"
+      << " [--input-set single|varied] [--csv PATH]\n";
 }
 
 bool ParseArgs(int argc, char** argv, BenchmarkConfig* config) {
@@ -189,6 +206,13 @@ bool ParseArgs(int argc, char** argv, BenchmarkConfig* config) {
       const auto value = require_value(arg);
       if (!value.has_value() || !ParseSizeT(*value, &config->batch_size)) {
         std::cerr << "Invalid --batch-size value\n";
+        return false;
+      }
+    } else if (arg == "--stabilization-iterations") {
+      const auto value = require_value(arg);
+      if (!value.has_value() ||
+          !ParseSizeT(*value, &config->stabilization_iterations)) {
+        std::cerr << "Invalid --stabilization-iterations value\n";
         return false;
       }
     } else if (arg == "--input-set") {
@@ -370,6 +394,32 @@ std::uint64_t UpdateParserChecksum(
   return checksum;
 }
 
+StabilizationResult RunProcessStabilization(
+    const BenchmarkConfig& config,
+    const std::vector<BenchmarkInput>& inputs) {
+  StabilizationResult result;
+  const auto start = std::chrono::steady_clock::now();
+
+  for (std::size_t i = 0; i < config.stabilization_iterations; ++i) {
+    const BenchmarkInput& input = inputs[i % inputs.size()];
+    const llgw::ParseResult parse_result =
+        llgw::ParseMarketDataLine(input.line);
+
+    if (parse_result.status != llgw::ParseStatus::kOk) {
+      std::cerr << "Stabilization parse failed for input "
+                << input.name << "\n";
+      std::exit(1);
+    }
+
+    result.checksum =
+        UpdateParserChecksum(result.checksum, parse_result.update);
+  }
+
+  const auto end = std::chrono::steady_clock::now();
+  result.elapsed_ns = ToNs(end - start);
+  return result;
+}
+
 void RunWarmup(const BenchmarkConfig& config,
                const std::vector<BenchmarkInput>& inputs,
                std::uint64_t* checksum) {
@@ -501,20 +551,30 @@ TrialResult RunTrial(std::size_t trial_index,
     baseline = MeasureBaseline(config, inputs);
   }
 
-  trial.baseline_total_elapsed_ns =
-      baseline.total_elapsed_ns;
+  trial.baseline_total_elapsed_ns = baseline.total_elapsed_ns;
   trial.baseline =
       Summarize(std::move(baseline.samples_ns_per_op));
 
-  trial.parser_total_elapsed_ns =
-      parser.total_elapsed_ns;
+  trial.parser_total_elapsed_ns = parser.total_elapsed_ns;
   trial.parser =
       Summarize(std::move(parser.samples_ns_per_op));
+
+  if (trial.parser_total_elapsed_ns > 0) {
+    trial.parser_timed_ops_per_second =
+        static_cast<double>(config.measured_iterations) * 1'000'000'000.0 /
+        static_cast<double>(trial.parser_total_elapsed_ns);
+  }
 
   trial.checksum =
       warmup_checksum ^ baseline.checksum ^ parser.checksum;
 
   return trial;
+}
+
+const char* TrialPhase(std::size_t trial_index) {
+  return trial_index == 1
+             ? "first_measured"
+             : "steady_state_candidate";
 }
 
 void PrintDistribution(const char* prefix,
@@ -533,6 +593,8 @@ void PrintDistribution(const char* prefix,
 
 void PrintTrial(const TrialResult& trial) {
   std::cout << "Trial " << trial.trial_index << "\n";
+  std::cout << "  trial_phase="
+            << TrialPhase(trial.trial_index) << "\n";
   std::cout << "  timed_batches=" << trial.timed_batches << "\n";
   std::cout << "  baseline_total_elapsed_ns="
             << trial.baseline_total_elapsed_ns << "\n";
@@ -540,7 +602,64 @@ void PrintTrial(const TrialResult& trial) {
   std::cout << "  parser_total_elapsed_ns="
             << trial.parser_total_elapsed_ns << "\n";
   PrintDistribution("parser", trial.parser);
+  std::cout << "  parser_timed_ops_per_second="
+            << trial.parser_timed_ops_per_second << "\n";
   std::cout << "  checksum=" << trial.checksum << "\n";
+}
+
+CrossTrialSummary BuildCrossTrialSummary(
+    const std::vector<TrialResult>& trials,
+    std::size_t first_index) {
+  CrossTrialSummary summary;
+
+  if (first_index >= trials.size()) {
+    return summary;
+  }
+
+  std::vector<double> p50_values;
+  std::vector<double> p95_values;
+  std::vector<double> p99_values;
+  std::vector<double> throughput_values;
+
+  for (std::size_t i = first_index; i < trials.size(); ++i) {
+    p50_values.push_back(trials[i].parser.p50_ns_per_op);
+    p95_values.push_back(trials[i].parser.p95_ns_per_op);
+    p99_values.push_back(trials[i].parser.p99_ns_per_op);
+    throughput_values.push_back(
+        trials[i].parser_timed_ops_per_second);
+  }
+
+  std::sort(p50_values.begin(), p50_values.end());
+  std::sort(p95_values.begin(), p95_values.end());
+  std::sort(p99_values.begin(), p99_values.end());
+  std::sort(throughput_values.begin(), throughput_values.end());
+
+  summary.trial_count = p50_values.size();
+  summary.parser_p50_median_ns_per_op =
+      Percentile(p50_values, 50, 100);
+  summary.parser_p95_median_ns_per_op =
+      Percentile(p95_values, 50, 100);
+  summary.parser_p99_median_ns_per_op =
+      Percentile(p99_values, 50, 100);
+  summary.parser_timed_ops_per_second_median =
+      Percentile(throughput_values, 50, 100);
+
+  return summary;
+}
+
+void PrintCrossTrialSummary(
+    const char* name,
+    const CrossTrialSummary& summary) {
+  std::cout << name << "\n";
+  std::cout << "  trial_count=" << summary.trial_count << "\n";
+  std::cout << "  parser_p50_median_ns_per_op="
+            << summary.parser_p50_median_ns_per_op << "\n";
+  std::cout << "  parser_p95_median_ns_per_op="
+            << summary.parser_p95_median_ns_per_op << "\n";
+  std::cout << "  parser_p99_median_ns_per_op="
+            << summary.parser_p99_median_ns_per_op << "\n";
+  std::cout << "  parser_timed_ops_per_second_median="
+            << summary.parser_timed_ops_per_second_median << "\n";
 }
 
 bool WriteCsv(const std::string& path,
@@ -558,7 +677,8 @@ bool WriteCsv(const std::string& path,
   file << std::fixed << std::setprecision(3);
 
   file
-      << "trial,input_set,input_count,warmup_iterations,"
+      << "trial,trial_phase,input_set,input_count,"
+      << "stabilization_iterations,warmup_iterations,"
       << "measured_iterations,batch_size,timed_batches,"
       << "baseline_total_elapsed_ns,"
       << "baseline_min_ns_per_op,baseline_p50_ns_per_op,"
@@ -567,13 +687,16 @@ bool WriteCsv(const std::string& path,
       << "parser_total_elapsed_ns,"
       << "parser_min_ns_per_op,parser_p50_ns_per_op,"
       << "parser_p95_ns_per_op,parser_p99_ns_per_op,"
-      << "parser_max_ns_per_op,checksum\n";
+      << "parser_max_ns_per_op,"
+      << "parser_timed_ops_per_second,checksum\n";
 
   for (const TrialResult& trial : trials) {
     file
         << trial.trial_index << ','
+        << TrialPhase(trial.trial_index) << ','
         << config.input_set << ','
         << inputs.size() << ','
+        << config.stabilization_iterations << ','
         << config.warmup_iterations << ','
         << config.measured_iterations << ','
         << config.batch_size << ','
@@ -590,6 +713,7 @@ bool WriteCsv(const std::string& path,
         << trial.parser.p95_ns_per_op << ','
         << trial.parser.p99_ns_per_op << ','
         << trial.parser.max_ns_per_op << ','
+        << trial.parser_timed_ops_per_second << ','
         << trial.checksum << '\n';
   }
 
@@ -609,9 +733,6 @@ int main(int argc, char** argv) {
   const std::vector<BenchmarkInput> inputs =
       BuildInputs(config.input_set);
 
-  const ClockPairResult clock_pair =
-      MeasureClockPairOverhead(10000);
-
   std::cout << std::fixed << std::setprecision(3);
 
   std::cout << "Parser benchmark smoke run\n";
@@ -620,6 +741,10 @@ int main(int argc, char** argv) {
   std::cout << "  timing_mode=batched\n";
   std::cout
       << "  baseline_is_reported_but_not_automatically_subtracted\n";
+  std::cout
+      << "  first_trial_is_reported_and_excluded_only_from_the_steady_state_summary\n";
+  std::cout << "  stabilization_iterations="
+            << config.stabilization_iterations << "\n";
   std::cout << "  warmup_iterations="
             << config.warmup_iterations << "\n";
   std::cout << "  measured_iterations="
@@ -629,6 +754,17 @@ int main(int argc, char** argv) {
   std::cout << "  input_set=" << config.input_set << "\n";
   std::cout << "  input_count=" << inputs.size() << "\n";
 
+  const StabilizationResult stabilization =
+      RunProcessStabilization(config, inputs);
+
+  std::cout << "Process stabilization\n";
+  std::cout << "  stabilization_elapsed_ns="
+            << stabilization.elapsed_ns << "\n";
+  std::cout << "  stabilization_checksum="
+            << stabilization.checksum << "\n";
+
+  const ClockPairResult clock_pair =
+      MeasureClockPairOverhead(10000);
   PrintMetadata(clock_pair);
 
   std::vector<TrialResult> trials;
@@ -641,6 +777,22 @@ int main(int argc, char** argv) {
         RunTrial(trial_index, config, inputs);
     PrintTrial(trial);
     trials.push_back(trial);
+  }
+
+  const CrossTrialSummary all_trials_summary =
+      BuildCrossTrialSummary(trials, 0);
+  PrintCrossTrialSummary("All-trial descriptive summary",
+                         all_trials_summary);
+
+  if (trials.size() > 1) {
+    const CrossTrialSummary steady_state_summary =
+        BuildCrossTrialSummary(trials, 1);
+    PrintCrossTrialSummary(
+        "Steady-state candidate summary (first trial excluded)",
+        steady_state_summary);
+  } else {
+    std::cout
+        << "Steady-state candidate summary unavailable: more than one trial is required\n";
   }
 
   if (config.csv_path.has_value()) {

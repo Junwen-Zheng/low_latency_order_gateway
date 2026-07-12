@@ -268,3 +268,26 @@ Notes:
 - Batched timing reduces timer quantization and per-operation clock overhead.
 - The baseline is not a perfect overhead estimate and is not subtracted automatically.
 - Results remain local smoke measurements rather than production latency claims.
+
+## Day 14
+
+Added process stabilization and explicit first-trial handling to the parser benchmark.
+
+Focus areas:
+
+- Added configurable process stabilization with `--stabilization-iterations`
+- Added an untimed parser stabilization pass before clock calibration and measured trials
+- Preserved and labeled the first measured trial as `first_measured`
+- Labeled later trials as `steady_state_candidate`
+- Added an all-trial descriptive summary
+- Added a steady-state candidate summary that excludes the first measured trial
+- Kept the first trial visible in console and CSV output
+- Added timed parser operations-per-second reporting
+- Added stabilization and trial-phase fields to CSV output
+- Updated README and benchmark methodology documentation
+
+Notes:
+
+- Stabilization reduces but does not eliminate cold-start, CPU-frequency, thermal, or scheduling effects.
+- Timed operations per second is derived only from measured parser-batch duration and is not an end-to-end throughput claim.
+- Raw first-trial data remains available rather than being silently discarded.

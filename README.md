@@ -88,22 +88,20 @@ The next architecture step is to replace queued order symbols with owned or fixe
 
 ## Benchmarks
 
-The project includes a batched parser benchmark smoke harness.
+The project includes a batched parser benchmark smoke harness with process stabilization and explicit first-trial handling.
 
 Example single-input run:
 
-./scripts/run_benchmarks.sh --warmup 6400 --iterations 64000 --trials 3 --batch-size 64 --input-set single
+./scripts/run_benchmarks.sh --stabilization-iterations 100000 --warmup 6400 --iterations 64000 --trials 5 --batch-size 64 --input-set single
 
 Example varied-input run:
 
-./scripts/run_benchmarks.sh --warmup 6400 --iterations 64000 --trials 3 --batch-size 64 --input-set varied
+./scripts/run_benchmarks.sh --stabilization-iterations 100000 --warmup 6400 --iterations 64000 --trials 5 --batch-size 64 --input-set varied
 
 Example CSV output:
 
-./scripts/run_benchmarks.sh --warmup 6400 --iterations 64000 --trials 3 --batch-size 64 --input-set varied --csv benchmark_results/parser_batched.csv
+./scripts/run_benchmarks.sh --stabilization-iterations 100000 --warmup 6400 --iterations 64000 --trials 5 --batch-size 64 --input-set varied --csv benchmark_results/parser_stabilized.csv
 
-The harness reports batched parser timing, a separate baseline loop, clock-pair timing, repeated trials, and environment metadata.
+The first measured trial remains visible but is excluded from a separate steady-state candidate summary. The harness also reports a separate baseline loop, clock-pair timing, timed parser throughput, repeated trials, and environment metadata.
 
-The baseline is not automatically subtracted because it is not a perfect model of benchmark overhead.
-
-Results are local and machine-dependent and should not be interpreted as production latency claims. See docs/benchmark_methodology.md.
+Results are local and machine-dependent and should not be interpreted as production latency or throughput claims. See docs/benchmark_methodology.md.
