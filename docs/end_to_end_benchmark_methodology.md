@@ -150,3 +150,13 @@ Acceptable wording:
 - measured mixed and all-order workloads separately
 - added invariant validation, repeated trials, stabilization, baseline measurements, and CSV output
 - documented that file I/O, feed replay, networking, and live exchange behavior are excluded
+
+## Workload Comparison Follow-Up
+
+The separate paired path-comparison benchmark was added to investigate workload comparability and the counterintuitive result that an all-orders workload could appear faster than a mixed workload.
+
+See:
+
+docs/path_comparison_benchmark_methodology.md
+
+No causal conclusion should be drawn from the original mixed-versus-all-orders timing difference without reviewing the paired text and prepared-path measurements.

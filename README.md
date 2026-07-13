@@ -123,3 +123,23 @@ All-orders workload:
 The benchmark excludes file I/O, feed replay, networking, and live exchange behavior. It validates system counters and reports local timed events per second, not production throughput.
 
 See docs/end_to_end_benchmark_methodology.md.
+
+### Paired Path-Comparison Benchmark
+
+A paired benchmark compares:
+
+text line → parser → strategy → pipeline → gateway → exchange
+
+against:
+
+pre-parsed update → strategy → pipeline → gateway → exchange
+
+It supports no-orders, mixed, and all-orders workloads.
+
+Example:
+
+./scripts/run_path_comparison_benchmark.sh --stabilization-iterations 100000 --warmup 6400 --iterations 64000 --trials 5 --batch-size 64 --workload mixed
+
+The paired difference is descriptive and must not be interpreted as exact parser latency.
+
+See docs/path_comparison_benchmark_methodology.md.

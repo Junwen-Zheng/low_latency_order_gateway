@@ -318,3 +318,30 @@ Notes:
 - Timed events per second is not file-replay, network, live-exchange, or production throughput.
 - Parser microbenchmark results remain separate from system-path benchmark results.
 - No production-readiness or latency claims are made.
+
+## Day 16
+
+Added a paired path-comparison benchmark to investigate workload comparability.
+
+Focus areas:
+
+- Added `benchmarks/bench_path_comparison.cpp`
+- Added `scripts/run_path_comparison_benchmark.sh`
+- Added `docs/path_comparison_benchmark_methodology.md`
+- Added the `bench_path_comparison` CMake target
+- Compared the full text-parser path with a pre-parsed control path
+- Added `no-orders`, `mixed`, and `all-orders` workloads
+- Measured both paths within every trial
+- Alternated path order across trials
+- Warmed each measured system state before timed batches
+- Added paired p50 and total-average descriptive differences
+- Added strategy, pipeline, gateway, and exchange invariant validation
+- Added CSV output
+- Updated README and end-to-end benchmark documentation
+
+Notes:
+
+- Paired differences are descriptive and are not exact parser-cost measurements.
+- File I/O and FeedReplay remain excluded.
+- The benchmark is intended to investigate comparability rather than justify a performance claim.
+- The all-orders workload appearing faster in an earlier run is treated as a benchmark question, not a system conclusion.

@@ -109,3 +109,10 @@ add_executable(bench_end_to_end
 )
 
 target_link_libraries(bench_end_to_end PRIVATE llgw_core)
+
+
+add_executable(bench_path_comparison
+  benchmarks/bench_path_comparison.cpp
+)
+
+target_link_libraries(bench_path_comparison PRIVATE llgw_core)
