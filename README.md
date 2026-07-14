@@ -143,3 +143,19 @@ Example:
 The paired difference is descriptive and must not be interpreted as exact parser latency.
 
 See docs/path_comparison_benchmark_methodology.md.
+
+### Consolidated Benchmark Suite
+
+Run the quick local suite:
+
+    ./scripts/run_benchmark_suite.sh
+
+Run the larger local suite:
+
+    ./scripts/run_benchmark_suite.sh --mode full --prefix benchmark_results/local_full_suite
+
+The suite builds once and runs the parser, in-memory end-to-end, and paired path-comparison benchmarks.
+
+CSV outputs are local artifacts, not CI performance gates or production claims.
+
+See docs/benchmark_suite.md.

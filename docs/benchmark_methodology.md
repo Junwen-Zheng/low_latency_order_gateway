@@ -185,3 +185,9 @@ Potential next steps include:
 6. separate end-to-end throughput measurements
 7. CI benchmark build-and-smoke verification without performance thresholds
 8. comparison against a deliberately simple reference parser
+
+## Consolidated Suite
+
+The parser benchmark is included in docs/benchmark_suite.md.
+
+The suite runner does not change its scope or limitations.

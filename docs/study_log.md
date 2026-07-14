@@ -345,3 +345,26 @@ Notes:
 - File I/O and FeedReplay remain excluded.
 - The benchmark is intended to investigate comparability rather than justify a performance claim.
 - The all-orders workload appearing faster in an earlier run is treated as a benchmark question, not a system conclusion.
+
+## Day 17
+
+Consolidated the existing benchmark tooling and documentation.
+
+Focus areas:
+
+- Added scripts/run_benchmark_suite.sh
+- Added docs/benchmark_suite.md
+- Added quick and full suite modes
+- Runs all seven existing benchmark configurations after one build
+- Added configurable CSV prefixes and non-empty output validation
+- Documented comparison boundaries and prohibited performance claims
+- Documented that benchmark values must not become CI performance gates
+- Linked the individual benchmark methodology documents
+- Updated the README
+
+Notes:
+
+- Day 17 adds no new measurement path.
+- Quick mode is a build-and-execution smoke suite.
+- Full mode remains a local developer-machine measurement.
+- Generated CSV files remain ignored by Git.

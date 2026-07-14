@@ -148,3 +148,9 @@ Acceptable descriptions include:
 - alternated path order across trials
 - validated all strategy, pipeline, gateway, and exchange counters
 - treated paired differences as descriptive rather than exact component attribution
+
+## Consolidated Suite
+
+The paired path comparison is included in docs/benchmark_suite.md.
+
+Paired differences remain descriptive rather than exact parser-latency measurements.

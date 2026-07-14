@@ -160,3 +160,9 @@ See:
 docs/path_comparison_benchmark_methodology.md
 
 No causal conclusion should be drawn from the original mixed-versus-all-orders timing difference without reviewing the paired text and prepared-path measurements.
+
+## Consolidated Suite
+
+The in-memory end-to-end benchmark is included in docs/benchmark_suite.md.
+
+File I/O, FeedReplay, networking, and live exchange behavior remain excluded.
