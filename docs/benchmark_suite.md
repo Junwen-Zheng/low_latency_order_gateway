@@ -48,3 +48,11 @@ Automated checks may verify compilation, successful execution, counter invariant
 ## Reporting Rules
 
 Do not claim production-grade latency, exchange-grade latency, live-trading throughput, network latency, lock-free performance, or superiority to professional systems.
+
+## Continuous Integration
+
+The lightweight CI workflow runs the repository correctness checks and this suite in `quick` mode.
+
+CI verifies successful execution and seven non-empty CSV outputs. It does not compare benchmark values against performance thresholds.
+
+See `docs/ci.md`.

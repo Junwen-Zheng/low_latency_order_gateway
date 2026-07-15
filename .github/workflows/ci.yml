@@ -1,0 +1,35 @@
+name: CI Smoke
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-smoke-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test-benchmark-smoke:
+    name: Build, test, and benchmark smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CMAKE_BUILD_PARALLEL_LEVEL: 2
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes cmake g++
+
+      - name: Run CI smoke checks
+        run: ./scripts/run_ci_smoke.sh benchmark_results/ci_smoke

@@ -159,3 +159,15 @@ The suite builds once and runs the parser, in-memory end-to-end, and paired path
 CSV outputs are local artifacts, not CI performance gates or production claims.
 
 See docs/benchmark_suite.md.
+
+### Continuous Integration
+
+GitHub Actions runs the repository checks and the quick seven-case benchmark smoke suite on pushes to `main`, pull requests, and manual dispatch.
+
+Run the same checks locally:
+
+    ./scripts/run_ci_smoke.sh benchmark_results/local_ci_smoke
+
+CI validates successful builds, tests, benchmark execution, invariants, and CSV creation. It does not enforce latency or throughput thresholds.
+
+See `docs/ci.md`.

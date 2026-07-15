@@ -368,3 +368,29 @@ Notes:
 - Quick mode is a build-and-execution smoke suite.
 - Full mode remains a local developer-machine measurement.
 - Generated CSV files remain ignored by Git.
+
+## Day 18
+
+Added a lightweight continuous-integration smoke workflow.
+
+Focus areas:
+
+- Added `.github/workflows/ci.yml`
+- Added `scripts/run_ci_smoke.sh`
+- Added `docs/ci.md`
+- Triggered CI on pushes to `main`, pull requests, and manual dispatch
+- Used read-only repository permissions
+- Added workflow concurrency cancellation
+- Added a twenty-minute job timeout
+- Ran all repository correctness checks
+- Ran the consolidated benchmark suite in quick mode
+- Validated seven non-empty benchmark CSV files
+- Kept latency and throughput values out of CI pass/fail decisions
+- Documented the local equivalent and CI scope boundaries
+
+Notes:
+
+- CI checks successful build, execution, counters, and output creation.
+- CI does not enforce permiformance thresholds.
+- GitHub-hosted-runner measurements are not directly comparable with local Mac measurements.
+- Day 18 adds automation rather than another benchmark path.
