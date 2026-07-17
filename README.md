@@ -171,3 +171,21 @@ Run the same checks locally:
 CI validates successful builds, tests, benchmark execution, invariants, and CSV creation. It does not enforce latency or throughput thresholds.
 
 See `docs/ci.md`.
+
+### Pre-Trade Risk Layer
+
+Orders can be checked before they reach the gateway:
+
+```text
+strategy
+→ order pipeline
+→ pre-trade risk manager
+→ order gateway
+→ exchange simulator
+```
+
+The deterministic checks cover symbol validity, finite positive price, positive quantity, maximum quantity, maximum notional, and an optional symbol allowlist.
+
+Risk-rejected orders are counted by explicit reason and never reach the gateway.
+
+See `docs/pre_trade_risk.md`.

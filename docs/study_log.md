@@ -394,3 +394,30 @@ Notes:
 - CI does not enforce permiformance thresholds.
 - GitHub-hosted-runner measurements are not directly comparable with local Mac measurements.
 - Day 18 adds automation rather than another benchmark path.
+
+## Day 19
+
+Added a deterministic pre-trade risk layer.
+
+Focus areas:
+
+- Added `PreTradeRiskManager`
+- Added configurable maximum order quantity
+- Added configurable maximum order notional
+- Added an optional fixed-capacity symbol allowlist
+- Added explicit risk rejection reasons
+- Added per-reason risk counters
+- Integrated risk checks into `OrderPipeline`
+- Added pipeline attribution for risk rejects and gateway rejects
+- Ensured risk-rejected orders do not reach the gateway
+- Integrated risk into the repository demo path
+- Added unit tests for every risk rejection reason
+- Added an end-to-end feed, strategy, pipeline, risk, gateway, and exchange test
+- Added `docs/pre_trade_risk.md`
+- Updated the README
+
+Notes:
+
+- Existing pipeline callers remain compatible because the risk-manager constructor argument is optional.
+- The risk layer is deterministic and single-process.
+- It does not claim production portfolio or regulatory risk coverage.

@@ -15,4 +15,6 @@ cmake --build build
 ./build/test_end_to_end_pipeline
 ./build/llgw
 
+./build/test_pre_trade_risk
+./build/test_end_to_end_risk
 echo "All repository checks passed."

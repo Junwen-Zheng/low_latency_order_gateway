@@ -21,6 +21,7 @@ add_library(llgw_core
   src/feed_replay.cpp
   src/market_data_parser.cpp
   src/order_gateway.cpp
+  src/pre_trade_risk.cpp
   src/simple_strategy.cpp
 )
 
@@ -96,6 +97,20 @@ add_executable(test_fixed_symbol
 
 target_link_libraries(test_fixed_symbol PRIVATE llgw_core)
 
+
+
+add_executable(test_pre_trade_risk
+  tests/test_pre_trade_risk.cpp
+)
+
+target_link_libraries(test_pre_trade_risk PRIVATE llgw_core)
+
+
+add_executable(test_end_to_end_risk
+  tests/test_end_to_end_risk.cpp
+)
+
+target_link_libraries(test_end_to_end_risk PRIVATE llgw_core)
 
 add_executable(bench_parser
   benchmarks/bench_parser.cpp

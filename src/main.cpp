@@ -6,12 +6,26 @@
 #include "llgw/messages.hpp"
 #include "llgw/order_gateway.hpp"
 #include "llgw/order_pipeline.hpp"
+#include "llgw/pre_trade_risk.hpp"
 #include "llgw/simple_strategy.hpp"
 
 int main() {
   llgw::ExchangeSimulator exchange;
   llgw::OrderGateway gateway(&exchange);
-  llgw::OrderPipeline<16> pipeline(&gateway);
+  llgw::RiskLimits risk_limits;
+  risk_limits.max_order_quantity = 1000;
+  risk_limits.max_order_notional = 1'000'000.0;
+  risk_limits.allowed_symbols[0] = "AAPL";
+  risk_limits.allowed_symbols[1] = "MSFT";
+  risk_limits.allowed_symbols[2] = "NVDA";
+  risk_limits.allowed_symbols[3] = "GOOG";
+  risk_limits.allowed_symbols[4] = "TSLA";
+  risk_limits.allowed_symbols[5] = "AMZN";
+  risk_limits.allowed_symbols[6] = "META";
+  risk_limits.allowed_symbols[7] = "SPY";
+  risk_limits.allowed_symbol_count = 8;
+  llgw::PreTradeRiskManager risk_manager(risk_limits);
+  llgw::OrderPipeline<16> pipeline(&gateway, &risk_manager);
   llgw::SimpleStrategy strategy(0.02);
 
   const llgw::FeedReplayResult replay_result = llgw::ReplayMarketDataFile(
