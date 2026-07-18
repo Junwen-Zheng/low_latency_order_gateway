@@ -421,3 +421,31 @@ Notes:
 - Existing pipeline callers remain compatible because the risk-manager constructor argument is optional.
 - The risk layer is deterministic and single-process.
 - It does not claim production portfolio or regulatory risk coverage.
+
+## Day 20
+
+Added deterministic order lifecycle tracking.
+
+Focus areas:
+
+- Added `include/llgw/order_lifecycle.hpp`
+- Added `src/order_lifecycle.cpp`
+- Added `tests/test_order_lifecycle.cpp`
+- Added `tests/test_end_to_end_lifecycle.cpp`
+- Added `docs/order_lifecycle.md`
+- Added created, queued, risk-rejected, sent, exchange-accepted, and exchange-rejected states
+- Enforced legal state transitions
+- Preserved risk and exchange rejection reasons
+- Rejected duplicate lifecycle registration
+- Added unknown-order and invalid-transition diagnostics
+- Integrated lifecycle tracking into `OrderPipeline`
+- Verified that risk-rejected orders never reach the gateway
+- Added lifecycle counters to the demo summary
+- Preserved compatibility for callers without lifecycle tracking
+
+Notes:
+
+- Terminal states cannot transition again.
+- Lifecycle duplicate rejection is distinct from ring-buffer backpressure.
+- Day 20 does not yet add cancellation, amendment, or fill states.
+- The tracker is single-process and correctness-oriented.

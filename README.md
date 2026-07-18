@@ -189,3 +189,21 @@ The deterministic checks cover symbol validity, finite positive price, positive 
 Risk-rejected orders are counted by explicit reason and never reach the gateway.
 
 See `docs/pre_trade_risk.md`.
+
+### Order Lifecycle Tracking
+
+Orders can be tracked through deterministic states:
+
+```text
+created → queued → risk_rejected
+```
+
+or:
+
+```text
+created → queued → sent → exchange_accepted | exchange_rejected
+```
+
+The tracker enforces legal transitions, preserves rejection reasons, rejects duplicate tracking, and verifies that risk-rejected orders never reach the gateway.
+
+See `docs/order_lifecycle.md`.

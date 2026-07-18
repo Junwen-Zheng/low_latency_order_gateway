@@ -21,6 +21,7 @@ add_library(llgw_core
   src/feed_replay.cpp
   src/market_data_parser.cpp
   src/order_gateway.cpp
+  src/order_lifecycle.cpp
   src/pre_trade_risk.cpp
   src/simple_strategy.cpp
 )
@@ -131,3 +132,16 @@ add_executable(bench_path_comparison
 )
 
 target_link_libraries(bench_path_comparison PRIVATE llgw_core)
+
+add_executable(test_order_lifecycle
+  tests/test_order_lifecycle.cpp
+)
+
+target_link_libraries(test_order_lifecycle PRIVATE llgw_core)
+
+
+add_executable(test_end_to_end_lifecycle
+  tests/test_end_to_end_lifecycle.cpp
+)
+
+target_link_libraries(test_end_to_end_lifecycle PRIVATE llgw_core)

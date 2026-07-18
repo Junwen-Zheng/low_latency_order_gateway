@@ -5,6 +5,7 @@
 #include "llgw/feed_replay.hpp"
 #include "llgw/messages.hpp"
 #include "llgw/order_gateway.hpp"
+#include "llgw/order_lifecycle.hpp"
 #include "llgw/order_pipeline.hpp"
 #include "llgw/pre_trade_risk.hpp"
 #include "llgw/simple_strategy.hpp"
@@ -25,7 +26,11 @@ int main() {
   risk_limits.allowed_symbols[7] = "SPY";
   risk_limits.allowed_symbol_count = 8;
   llgw::PreTradeRiskManager risk_manager(risk_limits);
-  llgw::OrderPipeline<16> pipeline(&gateway, &risk_manager);
+  llgw::OrderLifecycleTracker lifecycle_tracker;
+  llgw::OrderPipeline<16> pipeline(
+      &gateway,
+      &risk_manager,
+      &lifecycle_tracker);
   llgw::SimpleStrategy strategy(0.02);
 
   const llgw::FeedReplayResult replay_result = llgw::ReplayMarketDataFile(
@@ -66,6 +71,21 @@ int main() {
   std::cout << "  orders_sent=" << gateway.orders_sent() << "\n";
   std::cout << "  orders_accepted=" << gateway.orders_accepted() << "\n";
   std::cout << "  orders_rejected=" << gateway.orders_rejected() << "\n";
+  std::cout << "Order lifecycle summary\n";
+  std::cout << "  orders_registered="
+            << lifecycle_tracker.orders_registered() << "\n";
+  std::cout << "  orders_queued="
+            << lifecycle_tracker.orders_queued() << "\n";
+  std::cout << "  orders_risk_rejected="
+            << lifecycle_tracker.orders_risk_rejected() << "\n";
+  std::cout << "  orders_sent="
+            << lifecycle_tracker.orders_sent() << "\n";
+  std::cout << "  orders_exchange_accepted="
+            << lifecycle_tracker.orders_exchange_accepted() << "\n";
+  std::cout << "  orders_exchange_rejected="
+            << lifecycle_tracker.orders_exchange_rejected() << "\n";
+  std::cout << "  transition_errors="
+            << lifecycle_tracker.transition_errors() << "\n";
 
   return 0;
 }

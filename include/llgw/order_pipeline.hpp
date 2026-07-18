@@ -6,6 +6,7 @@
 
 #include "llgw/messages.hpp"
 #include "llgw/order_gateway.hpp"
+#include "llgw/order_lifecycle.hpp"
 #include "llgw/pre_trade_risk.hpp"
 #include "llgw/ring_buffer.hpp"
 
@@ -16,16 +17,32 @@ class OrderPipeline {
  public:
   explicit OrderPipeline(
       OrderGateway* gateway,
-      PreTradeRiskManager* risk_manager = nullptr)
-      : gateway_(gateway), risk_manager_(risk_manager) {}
+      PreTradeRiskManager* risk_manager = nullptr,
+      OrderLifecycleTracker* lifecycle_tracker = nullptr)
+      : gateway_(gateway),
+        risk_manager_(risk_manager),
+        lifecycle_tracker_(lifecycle_tracker) {}
 
   bool Enqueue(const OrderRequest& request) {
+    if (lifecycle_tracker_ != nullptr &&
+        lifecycle_tracker_->Contains(request.sequence_id)) {
+      ++orders_rejected_by_lifecycle_on_enqueue_;
+      return false;
+    }
+
     if (!buffer_.Push(request)) {
       ++orders_dropped_on_enqueue_;
       return false;
     }
 
     ++orders_enqueued_;
+
+    if (lifecycle_tracker_ != nullptr &&
+        !lifecycle_tracker_->RegisterQueued(
+            request.sequence_id)) {
+      ++lifecycle_transition_errors_;
+    }
+
     return true;
   }
 
@@ -50,22 +67,59 @@ class OrderPipeline {
           ++orders_rejected_by_risk_;
           last_risk_reject_reason_ =
               risk_decision.reject_reason;
+
+          if (lifecycle_tracker_ != nullptr &&
+              !lifecycle_tracker_->MarkRiskRejected(
+                  maybe_order->sequence_id,
+                  risk_decision.reject_reason)) {
+            ++lifecycle_transition_errors_;
+          }
+
           continue;
         }
+      }
+
+      if (lifecycle_tracker_ != nullptr &&
+          !lifecycle_tracker_->MarkSent(
+              maybe_order->sequence_id)) {
+        ++lifecycle_transition_errors_;
       }
 
       if (gateway_ == nullptr) {
         ++orders_rejected_;
         ++orders_rejected_by_gateway_;
+
+        if (lifecycle_tracker_ != nullptr &&
+            !lifecycle_tracker_->MarkExchangeRejected(
+                maybe_order->sequence_id,
+                OrderRejectReason::kInvalidSymbol)) {
+          ++lifecycle_transition_errors_;
+        }
+
         continue;
       }
 
-      const OrderResponse response = gateway_->SendOrder(*maybe_order);
+      const OrderResponse response =
+          gateway_->SendOrder(*maybe_order);
+
       if (response.accepted) {
         ++orders_accepted_;
+
+        if (lifecycle_tracker_ != nullptr &&
+            !lifecycle_tracker_->MarkExchangeAccepted(
+                maybe_order->sequence_id)) {
+          ++lifecycle_transition_errors_;
+        }
       } else {
         ++orders_rejected_;
         ++orders_rejected_by_gateway_;
+
+        if (lifecycle_tracker_ != nullptr &&
+            !lifecycle_tracker_->MarkExchangeRejected(
+                maybe_order->sequence_id,
+                response.reject_reason)) {
+          ++lifecycle_transition_errors_;
+        }
       }
     }
 
@@ -77,7 +131,12 @@ class OrderPipeline {
   std::size_t Size() const { return buffer_.Size(); }
 
   std::uint64_t orders_enqueued() const { return orders_enqueued_; }
-  std::uint64_t orders_dropped_on_enqueue() const { return orders_dropped_on_enqueue_; }
+  std::uint64_t orders_dropped_on_enqueue() const {
+    return orders_dropped_on_enqueue_;
+  }
+  std::uint64_t orders_rejected_by_lifecycle_on_enqueue() const {
+    return orders_rejected_by_lifecycle_on_enqueue_;
+  }
   std::uint64_t orders_drained() const { return orders_drained_; }
   std::uint64_t orders_accepted() const { return orders_accepted_; }
   std::uint64_t orders_rejected() const { return orders_rejected_; }
@@ -87,6 +146,9 @@ class OrderPipeline {
   std::uint64_t orders_rejected_by_gateway() const {
     return orders_rejected_by_gateway_;
   }
+  std::uint64_t lifecycle_transition_errors() const {
+    return lifecycle_transition_errors_;
+  }
   RiskRejectReason last_risk_reject_reason() const {
     return last_risk_reject_reason_;
   }
@@ -95,14 +157,17 @@ class OrderPipeline {
   RingBuffer<OrderRequest, Capacity> buffer_;
   OrderGateway* gateway_ = nullptr;
   PreTradeRiskManager* risk_manager_ = nullptr;
+  OrderLifecycleTracker* lifecycle_tracker_ = nullptr;
 
   std::uint64_t orders_enqueued_ = 0;
   std::uint64_t orders_dropped_on_enqueue_ = 0;
+  std::uint64_t orders_rejected_by_lifecycle_on_enqueue_ = 0;
   std::uint64_t orders_drained_ = 0;
   std::uint64_t orders_accepted_ = 0;
   std::uint64_t orders_rejected_ = 0;
   std::uint64_t orders_rejected_by_risk_ = 0;
   std::uint64_t orders_rejected_by_gateway_ = 0;
+  std::uint64_t lifecycle_transition_errors_ = 0;
   RiskRejectReason last_risk_reject_reason_ =
       RiskRejectReason::kNone;
 };
