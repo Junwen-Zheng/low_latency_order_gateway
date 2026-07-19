@@ -41,6 +41,43 @@ enum class OrderRejectReason {
   kDuplicateSequence,
 };
 
+
+enum class CancelRejectReason {
+  kNone,
+  kUnknownOrder,
+  kInvalidState,
+};
+
+struct CancelRequest {
+  std::uint64_t sequence_id = 0;
+};
+
+struct CancelResponse {
+  std::uint64_t sequence_id = 0;
+  bool accepted = false;
+  CancelRejectReason reject_reason = CancelRejectReason::kNone;
+};
+
+enum class AmendRejectReason {
+  kNone,
+  kUnknownOrder,
+  kInvalidPrice,
+  kInvalidQuantity,
+  kInvalidState,
+};
+
+struct AmendRequest {
+  std::uint64_t sequence_id = 0;
+  double new_price = 0.0;
+  std::uint32_t new_quantity = 0;
+};
+
+struct AmendResponse {
+  std::uint64_t sequence_id = 0;
+  bool accepted = false;
+  AmendRejectReason reject_reason = AmendRejectReason::kNone;
+};
+
 struct OrderResponse {
   std::uint64_t sequence_id = 0;
   bool accepted = false;

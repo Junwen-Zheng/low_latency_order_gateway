@@ -145,3 +145,16 @@ add_executable(test_end_to_end_lifecycle
 )
 
 target_link_libraries(test_end_to_end_lifecycle PRIVATE llgw_core)
+
+add_executable(test_order_actions
+  tests/test_order_actions.cpp
+)
+
+target_link_libraries(test_order_actions PRIVATE llgw_core)
+
+
+add_executable(test_end_to_end_order_actions
+  tests/test_end_to_end_order_actions.cpp
+)
+
+target_link_libraries(test_end_to_end_order_actions PRIVATE llgw_core)

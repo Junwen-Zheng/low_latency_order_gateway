@@ -207,3 +207,16 @@ created → queued → sent → exchange_accepted | exchange_rejected
 The tracker enforces legal transitions, preserves rejection reasons, rejects duplicate tracking, and verifies that risk-rejected orders never reach the gateway.
 
 See `docs/order_lifecycle.md`.
+
+### Cancellation and Amendment Flow
+
+Accepted exchange orders can be amended or cancelled deterministically.
+
+```text
+exchange_accepted → amend_pending → exchange_accepted
+exchange_accepted → cancel_pending → cancelled
+```
+
+Rejected amendments preserve the original active order. Illegal lifecycle actions are rejected before reaching the exchange.
+
+See `docs/order_actions.md`.

@@ -16,6 +16,12 @@ const char* ToString(OrderLifecycleState state) {
       return "exchange_accepted";
     case OrderLifecycleState::kExchangeRejected:
       return "exchange_rejected";
+    case OrderLifecycleState::kCancelPending:
+      return "cancel_pending";
+    case OrderLifecycleState::kCancelled:
+      return "cancelled";
+    case OrderLifecycleState::kAmendPending:
+      return "amend_pending";
   }
 
   return "unknown";
@@ -41,10 +47,9 @@ bool OrderLifecycleTracker::RegisterCreated(
   OrderLifecycleRecord record;
   record.sequence_id = sequence_id;
 
-  const auto [_, inserted] =
-      records_.emplace(sequence_id, record);
+  const auto result = records_.emplace(sequence_id, record);
 
-  if (!inserted) {
+  if (!result.second) {
     return Fail(LifecycleError::kDuplicateOrder);
   }
 
@@ -139,6 +144,98 @@ bool OrderLifecycleTracker::MarkExchangeRejected(
   return true;
 }
 
+bool OrderLifecycleTracker::MarkCancelPending(
+    std::uint64_t sequence_id) {
+  if (!Transition(
+          sequence_id,
+          OrderLifecycleState::kExchangeAccepted,
+          OrderLifecycleState::kCancelPending)) {
+    return false;
+  }
+
+  ++cancel_requests_;
+  return true;
+}
+
+bool OrderLifecycleTracker::MarkCancelled(
+    std::uint64_t sequence_id) {
+  if (!Transition(
+          sequence_id,
+          OrderLifecycleState::kCancelPending,
+          OrderLifecycleState::kCancelled)) {
+    return false;
+  }
+
+  ++cancels_accepted_;
+  return true;
+}
+
+bool OrderLifecycleTracker::MarkCancelRejected(
+    std::uint64_t sequence_id,
+    CancelRejectReason reason) {
+  if (reason == CancelRejectReason::kNone) {
+    return Fail(LifecycleError::kInvalidTransition);
+  }
+
+  if (!Transition(
+          sequence_id,
+          OrderLifecycleState::kCancelPending,
+          OrderLifecycleState::kExchangeAccepted)) {
+    return false;
+  }
+
+  records_.at(sequence_id).cancel_reject_reason = reason;
+  ++cancels_rejected_;
+  return true;
+}
+
+bool OrderLifecycleTracker::MarkAmendPending(
+    std::uint64_t sequence_id) {
+  if (!Transition(
+          sequence_id,
+          OrderLifecycleState::kExchangeAccepted,
+          OrderLifecycleState::kAmendPending)) {
+    return false;
+  }
+
+  ++amend_requests_;
+  return true;
+}
+
+bool OrderLifecycleTracker::MarkAmendAccepted(
+    std::uint64_t sequence_id) {
+  if (!Transition(
+          sequence_id,
+          OrderLifecycleState::kAmendPending,
+          OrderLifecycleState::kExchangeAccepted)) {
+    return false;
+  }
+
+  records_.at(sequence_id).amend_reject_reason =
+      AmendRejectReason::kNone;
+  ++amends_accepted_;
+  return true;
+}
+
+bool OrderLifecycleTracker::MarkAmendRejected(
+    std::uint64_t sequence_id,
+    AmendRejectReason reason) {
+  if (reason == AmendRejectReason::kNone) {
+    return Fail(LifecycleError::kInvalidTransition);
+  }
+
+  if (!Transition(
+          sequence_id,
+          OrderLifecycleState::kAmendPending,
+          OrderLifecycleState::kExchangeAccepted)) {
+    return false;
+  }
+
+  records_.at(sequence_id).amend_reject_reason = reason;
+  ++amends_rejected_;
+  return true;
+}
+
 bool OrderLifecycleTracker::Contains(
     std::uint64_t sequence_id) const {
   return records_.find(sequence_id) != records_.end();
@@ -148,6 +245,7 @@ std::optional<OrderLifecycleRecord>
 OrderLifecycleTracker::Find(
     std::uint64_t sequence_id) const {
   const auto it = records_.find(sequence_id);
+
   if (it == records_.end()) {
     return std::nullopt;
   }

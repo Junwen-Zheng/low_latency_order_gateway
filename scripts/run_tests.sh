@@ -19,4 +19,6 @@ cmake --build build
 ./build/test_end_to_end_risk
 ./build/test_order_lifecycle
 ./build/test_end_to_end_lifecycle
+./build/test_order_actions
+./build/test_end_to_end_order_actions
 echo "All repository checks passed."

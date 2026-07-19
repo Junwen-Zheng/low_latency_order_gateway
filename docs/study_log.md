@@ -449,3 +449,30 @@ Notes:
 - Lifecycle duplicate rejection is distinct from ring-buffer backpressure.
 - Day 20 does not yet add cancellation, amendment, or fill states.
 - The tracker is single-process and correctness-oriented.
+
+## Day 21
+
+Added deterministic cancellation and amendment flow.
+
+Focus areas:
+
+- Added cancel and amendment request/response types
+- Added explicit rejection reasons
+- Added an exchange active-order store
+- Added active-order lookup
+- Added cancellation and amendment validation
+- Preserved original orders after rejected amendments
+- Added cancel-pending, cancelled, and amend-pending states
+- Added lifecycle action counters
+- Added gateway action counters
+- Rejected illegal lifecycle actions before exchange dispatch
+- Added unit and end-to-end action tests
+- Added `docs/order_actions.md`
+- Updated README and test registration
+
+Notes:
+
+- Sequence IDs remain immutable across amendments.
+- Cancelled orders cannot be amended.
+- Rejected amendments return to the active accepted state.
+- Fills and partial fills remain out of scope.

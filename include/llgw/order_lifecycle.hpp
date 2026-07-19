@@ -16,6 +16,9 @@ enum class OrderLifecycleState {
   kSent,
   kExchangeAccepted,
   kExchangeRejected,
+  kCancelPending,
+  kCancelled,
+  kAmendPending,
 };
 
 enum class LifecycleError {
@@ -30,6 +33,8 @@ struct OrderLifecycleRecord {
   OrderLifecycleState state = OrderLifecycleState::kCreated;
   RiskRejectReason risk_reject_reason = RiskRejectReason::kNone;
   OrderRejectReason exchange_reject_reason = OrderRejectReason::kNone;
+  CancelRejectReason cancel_reject_reason = CancelRejectReason::kNone;
+  AmendRejectReason amend_reject_reason = AmendRejectReason::kNone;
 };
 
 const char* ToString(OrderLifecycleState state);
@@ -50,6 +55,18 @@ class OrderLifecycleTracker {
       std::uint64_t sequence_id,
       OrderRejectReason reason);
 
+  bool MarkCancelPending(std::uint64_t sequence_id);
+  bool MarkCancelled(std::uint64_t sequence_id);
+  bool MarkCancelRejected(
+      std::uint64_t sequence_id,
+      CancelRejectReason reason);
+
+  bool MarkAmendPending(std::uint64_t sequence_id);
+  bool MarkAmendAccepted(std::uint64_t sequence_id);
+  bool MarkAmendRejected(
+      std::uint64_t sequence_id,
+      AmendRejectReason reason);
+
   bool Contains(std::uint64_t sequence_id) const;
   std::optional<OrderLifecycleRecord> Find(
       std::uint64_t sequence_id) const;
@@ -64,6 +81,12 @@ class OrderLifecycleTracker {
   std::uint64_t orders_exchange_rejected() const {
     return orders_exchange_rejected_;
   }
+  std::uint64_t cancel_requests() const { return cancel_requests_; }
+  std::uint64_t cancels_accepted() const { return cancels_accepted_; }
+  std::uint64_t cancels_rejected() const { return cancels_rejected_; }
+  std::uint64_t amend_requests() const { return amend_requests_; }
+  std::uint64_t amends_accepted() const { return amends_accepted_; }
+  std::uint64_t amends_rejected() const { return amends_rejected_; }
 
   std::uint64_t transition_errors() const { return transition_errors_; }
   std::uint64_t duplicate_order_errors() const {
@@ -93,6 +116,13 @@ class OrderLifecycleTracker {
   std::uint64_t orders_sent_ = 0;
   std::uint64_t orders_exchange_accepted_ = 0;
   std::uint64_t orders_exchange_rejected_ = 0;
+
+  std::uint64_t cancel_requests_ = 0;
+  std::uint64_t cancels_accepted_ = 0;
+  std::uint64_t cancels_rejected_ = 0;
+  std::uint64_t amend_requests_ = 0;
+  std::uint64_t amends_accepted_ = 0;
+  std::uint64_t amends_rejected_ = 0;
 
   std::uint64_t transition_errors_ = 0;
   std::uint64_t duplicate_order_errors_ = 0;
