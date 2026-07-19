@@ -12,7 +12,6 @@
 
 int main() {
   llgw::ExchangeSimulator exchange;
-  llgw::OrderGateway gateway(&exchange);
   llgw::RiskLimits risk_limits;
   risk_limits.max_order_quantity = 1000;
   risk_limits.max_order_notional = 1'000'000.0;
@@ -27,6 +26,7 @@ int main() {
   risk_limits.allowed_symbol_count = 8;
   llgw::PreTradeRiskManager risk_manager(risk_limits);
   llgw::OrderLifecycleTracker lifecycle_tracker;
+  llgw::OrderGateway gateway(&exchange, &lifecycle_tracker);
   llgw::OrderPipeline<16> pipeline(
       &gateway,
       &risk_manager,
