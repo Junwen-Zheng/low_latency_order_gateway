@@ -220,3 +220,13 @@ exchange_accepted → cancel_pending → cancelled
 Rejected amendments preserve the original active order. Illegal lifecycle actions are rejected before reaching the exchange.
 
 See `docs/order_actions.md`.
+
+### Structured Execution Reports
+
+Lifecycle transitions can emit deterministic structured reports with monotonic event indexes, sequence IDs, event types, rejection sources, and stable rejection reasons.
+
+```text
+event=5 sequence_id=42 type=exchange_rejected reject_source=exchange reject_reason=duplicate_sequence
+```
+
+See `docs/execution_reports.md`.

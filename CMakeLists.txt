@@ -18,6 +18,7 @@ include_directories(include)
 
 add_library(llgw_core
   src/exchange_simulator.cpp
+  src/execution_report.cpp
   src/feed_replay.cpp
   src/market_data_parser.cpp
   src/order_gateway.cpp
@@ -158,3 +159,16 @@ add_executable(test_end_to_end_order_actions
 )
 
 target_link_libraries(test_end_to_end_order_actions PRIVATE llgw_core)
+
+add_executable(test_execution_report
+  tests/test_execution_report.cpp
+)
+
+target_link_libraries(test_execution_report PRIVATE llgw_core)
+
+
+add_executable(test_end_to_end_execution_report
+  tests/test_end_to_end_execution_report.cpp
+)
+
+target_link_libraries(test_end_to_end_execution_report PRIVATE llgw_core)

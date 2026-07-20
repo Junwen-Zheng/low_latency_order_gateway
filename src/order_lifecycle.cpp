@@ -2,6 +2,10 @@
 
 namespace llgw {
 
+OrderLifecycleTracker::OrderLifecycleTracker(
+    ExecutionReportJournal* execution_reports)
+    : execution_reports_(execution_reports) {}
+
 const char* ToString(OrderLifecycleState state) {
   switch (state) {
     case OrderLifecycleState::kCreated:
@@ -55,6 +59,13 @@ bool OrderLifecycleTracker::RegisterCreated(
 
   ++orders_registered_;
   last_error_ = LifecycleError::kNone;
+
+  if (execution_reports_ != nullptr) {
+    execution_reports_->RecordState(
+        sequence_id,
+        ExecutionReportType::kCreated);
+  }
+
   return true;
 }
 
@@ -77,6 +88,13 @@ bool OrderLifecycleTracker::MarkQueued(
   }
 
   ++orders_queued_;
+
+  if (execution_reports_ != nullptr) {
+    execution_reports_->RecordState(
+        sequence_id,
+        ExecutionReportType::kQueued);
+  }
+
   return true;
 }
 
@@ -96,6 +114,13 @@ bool OrderLifecycleTracker::MarkRiskRejected(
 
   records_.at(sequence_id).risk_reject_reason = reason;
   ++orders_risk_rejected_;
+
+  if (execution_reports_ != nullptr) {
+    execution_reports_->RecordRiskRejected(
+        sequence_id,
+        reason);
+  }
+
   return true;
 }
 
@@ -109,6 +134,13 @@ bool OrderLifecycleTracker::MarkSent(
   }
 
   ++orders_sent_;
+
+  if (execution_reports_ != nullptr) {
+    execution_reports_->RecordState(
+        sequence_id,
+        ExecutionReportType::kSent);
+  }
+
   return true;
 }
 
@@ -122,6 +154,13 @@ bool OrderLifecycleTracker::MarkExchangeAccepted(
   }
 
   ++orders_exchange_accepted_;
+
+  if (execution_reports_ != nullptr) {
+    execution_reports_->RecordState(
+        sequence_id,
+        ExecutionReportType::kExchangeAccepted);
+  }
+
   return true;
 }
 
@@ -141,6 +180,13 @@ bool OrderLifecycleTracker::MarkExchangeRejected(
 
   records_.at(sequence_id).exchange_reject_reason = reason;
   ++orders_exchange_rejected_;
+
+  if (execution_reports_ != nullptr) {
+    execution_reports_->RecordExchangeRejected(
+        sequence_id,
+        reason);
+  }
+
   return true;
 }
 
@@ -154,6 +200,13 @@ bool OrderLifecycleTracker::MarkCancelPending(
   }
 
   ++cancel_requests_;
+
+  if (execution_reports_ != nullptr) {
+    execution_reports_->RecordState(
+        sequence_id,
+        ExecutionReportType::kCancelPending);
+  }
+
   return true;
 }
 
@@ -167,6 +220,13 @@ bool OrderLifecycleTracker::MarkCancelled(
   }
 
   ++cancels_accepted_;
+
+  if (execution_reports_ != nullptr) {
+    execution_reports_->RecordState(
+        sequence_id,
+        ExecutionReportType::kCancelled);
+  }
+
   return true;
 }
 
@@ -186,6 +246,13 @@ bool OrderLifecycleTracker::MarkCancelRejected(
 
   records_.at(sequence_id).cancel_reject_reason = reason;
   ++cancels_rejected_;
+
+  if (execution_reports_ != nullptr) {
+    execution_reports_->RecordCancelRejected(
+        sequence_id,
+        reason);
+  }
+
   return true;
 }
 
@@ -199,6 +266,13 @@ bool OrderLifecycleTracker::MarkAmendPending(
   }
 
   ++amend_requests_;
+
+  if (execution_reports_ != nullptr) {
+    execution_reports_->RecordState(
+        sequence_id,
+        ExecutionReportType::kAmendPending);
+  }
+
   return true;
 }
 
@@ -214,6 +288,13 @@ bool OrderLifecycleTracker::MarkAmendAccepted(
   records_.at(sequence_id).amend_reject_reason =
       AmendRejectReason::kNone;
   ++amends_accepted_;
+
+  if (execution_reports_ != nullptr) {
+    execution_reports_->RecordState(
+        sequence_id,
+        ExecutionReportType::kAmendAccepted);
+  }
+
   return true;
 }
 
@@ -233,6 +314,13 @@ bool OrderLifecycleTracker::MarkAmendRejected(
 
   records_.at(sequence_id).amend_reject_reason = reason;
   ++amends_rejected_;
+
+  if (execution_reports_ != nullptr) {
+    execution_reports_->RecordAmendRejected(
+        sequence_id,
+        reason);
+  }
+
   return true;
 }
 

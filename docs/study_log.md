@@ -476,3 +476,30 @@ Notes:
 - Cancelled orders cannot be amended.
 - Rejected amendments return to the active accepted state.
 - Fills and partial fills remain out of scope.
+
+## Day 22
+
+Added deterministic structured execution reports and observability.
+
+Focus areas:
+
+- Added `include/llgw/execution_report.hpp`
+- Added `src/execution_report.cpp`
+- Added `tests/test_execution_report.cpp`
+- Added `tests/test_end_to_end_execution_report.cpp`
+- Added `docs/execution_reports.md`
+- Added monotonic one-based event indexes
+- Added stable event-type and rejection-source strings
+- Preserved exact risk, exchange, amend, and cancel rejection reasons
+- Integrated report emission into successful lifecycle transitions
+- Added per-sequence report filtering
+- Added total, rejection, submission, and action counters
+- Added stable text formatting
+- Added demo report output
+- Preserved optional lifecycle construction for existing callers
+
+Notes:
+
+- Reports are synchronous and deterministic.
+- Report order reflects lifecycle transition order.
+- Day 22 does not add timestamps, persistence, concurrency, or fills.

@@ -2,6 +2,7 @@
 #include <optional>
 
 #include "llgw/exchange_simulator.hpp"
+#include "llgw/execution_report.hpp"
 #include "llgw/feed_replay.hpp"
 #include "llgw/messages.hpp"
 #include "llgw/order_gateway.hpp"
@@ -25,7 +26,9 @@ int main() {
   risk_limits.allowed_symbols[7] = "SPY";
   risk_limits.allowed_symbol_count = 8;
   llgw::PreTradeRiskManager risk_manager(risk_limits);
-  llgw::OrderLifecycleTracker lifecycle_tracker;
+  llgw::ExecutionReportJournal execution_reports;
+  llgw::OrderLifecycleTracker lifecycle_tracker(
+      &execution_reports);
   llgw::OrderGateway gateway(&exchange, &lifecycle_tracker);
   llgw::OrderPipeline<16> pipeline(
       &gateway,
@@ -86,6 +89,20 @@ int main() {
             << lifecycle_tracker.orders_exchange_rejected() << "\n";
   std::cout << "  transition_errors="
             << lifecycle_tracker.transition_errors() << "\n";
+  std::cout << "Execution report summary\n";
+  std::cout << "  reports_recorded="
+            << execution_reports.reports_recorded() << "\n";
+  std::cout << "  rejection_reports="
+            << execution_reports.rejection_reports() << "\n";
+  std::cout << "  order_reports="
+            << execution_reports.order_reports() << "\n";
+  std::cout << "  action_reports="
+            << execution_reports.action_reports() << "\n";
+  for (const llgw::ExecutionReport& report :
+       execution_reports.reports()) {
+    std::cout << "  " << llgw::FormatExecutionReport(report)
+              << "\n";
+  }
 
   return 0;
 }

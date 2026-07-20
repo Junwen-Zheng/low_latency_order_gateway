@@ -4,6 +4,7 @@
 #include <optional>
 #include <unordered_map>
 
+#include "llgw/execution_report.hpp"
 #include "llgw/messages.hpp"
 #include "llgw/pre_trade_risk.hpp"
 
@@ -42,6 +43,9 @@ const char* ToString(LifecycleError error);
 
 class OrderLifecycleTracker {
  public:
+  explicit OrderLifecycleTracker(
+      ExecutionReportJournal* execution_reports = nullptr);
+
   bool RegisterCreated(std::uint64_t sequence_id);
   bool RegisterQueued(std::uint64_t sequence_id);
 
@@ -108,6 +112,7 @@ class OrderLifecycleTracker {
       OrderLifecycleState next);
   bool Fail(LifecycleError error);
 
+  ExecutionReportJournal* execution_reports_ = nullptr;
   std::unordered_map<std::uint64_t, OrderLifecycleRecord> records_;
 
   std::uint64_t orders_registered_ = 0;
