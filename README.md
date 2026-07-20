@@ -230,3 +230,13 @@ event=5 sequence_id=42 type=exchange_rejected reject_source=exchange reject_reas
 ```
 
 See `docs/execution_reports.md`.
+
+### Production-Readiness Quality Gate
+
+Run the strict build, complete CTest suite, and platform-supported sanitizer checks with:
+
+```bash
+./scripts/run_quality_gate.sh
+```
+
+The audit explicitly documents ownership, allocation, concurrency, recovery, and benchmarking boundaries. See `docs/production_readiness.md`.

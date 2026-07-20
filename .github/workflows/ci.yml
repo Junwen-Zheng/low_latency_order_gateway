@@ -1,4 +1,4 @@
-name: CI Smoke
+name: CI Quality Gate
 
 on:
   push:
@@ -11,14 +11,14 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-smoke-${{ github.workflow }}-${{ github.ref }}
+  group: ci-quality-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build-test-benchmark-smoke:
-    name: Build, test, and benchmark smoke
+  quality-gate-and-benchmark-smoke:
+    name: Strict build, sanitizers, tests, and benchmark smoke
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     env:
       CMAKE_BUILD_PARALLEL_LEVEL: 2
 
@@ -31,5 +31,5 @@ jobs:
           sudo apt-get update
           sudo apt-get install --yes cmake g++
 
-      - name: Run CI smoke checks
+      - name: Run quality gate and benchmark smoke
         run: ./scripts/run_ci_smoke.sh benchmark_results/ci_smoke

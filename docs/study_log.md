@@ -503,3 +503,41 @@ Notes:
 - Reports are synchronous and deterministic.
 - Report order reflects lifecycle transition order.
 - Day 22 does not add timestamps, persistence, concurrency, or fills.
+
+## Day 23
+
+Completed the production-readiness audit and hardening pass.
+
+Focus areas:
+
+- Registered all correctness executables with CTest
+- Registered the demo with a deterministic working directory
+- Added `LLGW_WARNINGS_AS_ERRORS`
+- Added `LLGW_ENABLE_SANITIZERS`
+- Added AddressSanitizer and UndefinedBehaviorSanitizer builds
+- Added `scripts/run_sanitizers.sh`
+- Added `scripts/run_quality_gate.sh`
+- Updated CI smoke checks to run the quality gate first
+- Added `tests/test_hardening.cpp`
+- Added non-finite price and amendment coverage
+- Verified cancelled sequence IDs cannot be reused
+- Verified allowlist count clamping
+- Verified null-exchange lifecycle rollback
+- Verified deterministic null-gateway rejection behavior
+- Added `docs/production_readiness.md`
+- Documented non-owning pointer lifetimes, allocation boundaries, concurrency limits, recovery gaps, and benchmark scope
+
+Notes:
+
+- The quality gate is correctness-oriented and does not enforce benchmark thresholds.
+- Sanitizer builds disable leak detection for AppleClang portability while retaining address and undefined-behavior checks.
+- The project is presented as a deterministic execution lab, not a production-deployable gateway.
+
+### Day 23 macOS sanitizer adjustment
+
+- Diagnosed an AppleClang 17 AddressSanitizer startup deadlock on macOS.
+- Confirmed the hang occurred in the ASan runtime during dyld initialization,
+  before the first test entered `main()`.
+- Configured AppleClang builds to run UndefinedBehaviorSanitizer locally.
+- Preserved AddressSanitizer plus UndefinedBehaviorSanitizer for Linux CI.
+- Added per-test sanitizer timeouts to prevent indefinite quality-gate hangs.

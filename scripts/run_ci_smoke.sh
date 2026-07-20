@@ -3,11 +3,11 @@ set -euo pipefail
 
 prefix="${1:-benchmark_results/ci_smoke}"
 
-echo "CI smoke checks"
+echo "CI quality gate and benchmark smoke"
 echo "  benchmark_prefix=$prefix"
 echo "  performance_thresholds=disabled"
 
-./scripts/run_tests.sh
+./scripts/run_quality_gate.sh
 
 ./scripts/run_benchmark_suite.sh \
   --mode quick \
@@ -30,4 +30,4 @@ if [[ "$csv_count" -ne 7 ]]; then
   exit 1
 fi
 
-echo "CI smoke checks passed."
+echo "CI quality gate and benchmark smoke passed."
