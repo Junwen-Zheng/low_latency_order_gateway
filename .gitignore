@@ -7,3 +7,6 @@ cmake-build-*/
 *.out
 *.log
 benchmark_results/*.csv
+
+build-quality/
+build-sanitizers/
