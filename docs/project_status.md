@@ -1,101 +1,105 @@
 # Project Status
 
-## Current Stage
+## Release State
 
-The project currently has a deterministic single-process simulator path:
+The repository is a completed `v1.0.0` release candidate.
 
-feed replay → parser → simple strategy → order pipeline → gateway → exchange simulator
+Current scope: deterministic single-process execution simulator with correctness tests, benchmark tooling, CI, and a production-boundary audit.
 
-The focus so far has been correctness, ownership, and clear system boundaries.
+## Completed Capabilities
 
-## Completed Work
+### Market Data
 
-### Day 1 — Project Foundation
+- fixed-format parser
+- explicit parser statuses
+- malformed-input coverage
+- deterministic file replay
+- replay counters and failure location
 
-- Created CMake project
-- Added basic message structures
-- Added initial market-data parser
-- Added parser tests
-- Added simple executable
-- Added initial README and study notes
+### Order Path
 
-### Day 2 — Parser Correctness
+- simple strategy trigger
+- owned fixed-size symbols
+- fixed-capacity ring buffer
+- order pipeline and backpressure counters
+- gateway and exchange simulation
+- deterministic rejection reasons
 
-- Added sample feed file
-- Strengthened parser field-count checks
-- Added malformed-input tests
-- Added invalid market-state checks
-- Added CRLF handling
-- Updated main executable to validate sample feed
+### Risk and State
 
-### Day 3 — Feed Replay
+- maximum quantity
+- maximum notional
+- optional symbol allowlist
+- lifecycle state machine
+- duplicate and illegal-transition detection
+- active-order storage
+- amendment and cancellation
+- structured execution reports
 
-- Added deterministic feed replay component
-- Added replay result status reporting
-- Added replay tests for valid, invalid, missing, and empty files
-- Updated main executable to use feed replay component
+### Verification
 
-### Day 4 — Order Gateway Simulator
+- 19 correctness and hardening executables
+- demo registered as the twentieth CTest case
+- warnings-as-errors Release build
+- sanitizer build
+- platform-aware ASan/UBSan policy
+- GitHub Actions quality gate
+- seven-case quick benchmark smoke suite
+- non-empty CSV validation
+- no CI latency thresholds
 
-- Added order request/response types
-- Added order side and reject reason enums
-- Added exchange simulator
-- Added order gateway
-- Added exchange and gateway tests
+### Documentation
 
-### Day 5 — End-to-End Order Flow
+- architecture
+- benchmark methodologies
+- CI scope
+- risk, lifecycle, actions, and execution reports
+- production-readiness audit
+- final report
+- portfolio summary
+- release checklist
+- day-by-day study log
 
-- Added simple spread-threshold strategy
-- Added strategy tests
-- Added end-to-end replay → strategy → gateway → exchange tests
-- Fixed threshold comparison with a small floating-point epsilon
+## Final Validation Target
 
-### Day 6 — Ring Buffer
+Before tagging `v1.0.0`:
 
-- Added fixed-size templated ring buffer
-- Added FIFO, full-buffer, empty-buffer, wrap-around, and string-value tests
+```bash
+./scripts/run_final_validation.sh
+```
 
-### Day 7 — Order Pipeline
+Expected high-level result:
 
-- Added order pipeline backed by ring buffer
-- Added enqueue/drop/drain counters
-- Added pipeline acceptance/rejection counters
-- Added order pipeline tests
-- Added end-to-end replay → strategy → pipeline → gateway → exchange tests
+```text
+20/20 strict CTest cases passed
+20/20 sanitizer CTest cases passed
+7 non-empty benchmark CSV files
+Final validation passed.
+```
 
-## Current Test Coverage
+## Benchmark Status
 
-The test script currently runs:
+Benchmark tooling is complete for the current single-process scope.
 
-- test_market_data_parser
-- test_feed_replay
-- test_exchange_simulator
-- test_order_gateway
-- test_simple_strategy
-- test_end_to_end_order_flow
-- test_ring_buffer
-- test_order_pipeline
-- test_end_to_end_pipeline
-- llgw demo executable
+The stored Day 17 quick-suite artifacts are examples of local measurement output. They are not release gates and must not be compared across machines or environments without matching configuration.
 
-## Current Known Limitations
+## Production Boundary
 
-- No benchmark harness yet
-- No latency numbers yet
-- No network input yet
-- No packet-loss or sequence-gap model yet
-- No live exchange connectivity
-- No order book or matching engine
-- No fills or partial fills
-- No asynchronous threading
-- No owned symbol storage for queued orders yet
-- Ring buffer is not lock-free or atomic yet
+The project is ready as a deterministic portfolio artifact, a C++ systems-design discussion project, a benchmark-methodology exercise, and a base for future execution research.
 
-## Near-Term Next Steps
+It is not ready as a live exchange gateway, production risk system, multithreaded low-latency engine, persistent order-management system, or matching engine.
 
-Recommended next steps:
+## Post-v1 Ideas
 
-1. Replace queued order symbols with owned or fixed-size symbol storage.
-2. Add deterministic tests proving orders can be queued during replay and drained after replay.
-3. Only after that, consider a basic benchmark harness.
-4. Document benchmark methodology before reporting any performance numbers.
+Post-v1 work should be a separate phase, not required for this release:
+
+- explicit SPSC threading model
+- bounded lifecycle and report storage
+- exchange-assigned identifiers
+- fill and partial-fill events
+- persistence and deterministic recovery replay
+- Linux CPU-affinity experiments
+- allocation instrumentation
+- binary protocol encoding
+
+These are not blockers for `v1.0.0`.

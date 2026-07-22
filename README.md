@@ -1,22 +1,13 @@
 # Low-Latency C++ Order Gateway Simulator
 
-This is a C++20 learning project focused on deterministic systems components behind latency-sensitive trading infrastructure.
+A deterministic C++20 execution-systems lab that models the path from market-data parsing to exchange acknowledgement.
 
-The project currently covers:
+The repository is designed as a portfolio and research artifact for latency-sensitive trading infrastructure. It emphasizes correctness, explicit state transitions, ownership discipline, reproducible benchmarks, and honest scope boundaries.
 
-- fixed-format market-data parsing
-- deterministic feed replay
-- simple strategy-to-order flow
-- order gateway simulation
-- exchange-side accept/reject simulation
-- fixed-size ring-buffer-backed order pipeline
-- correctness-focused tests
+## System Flow
 
-This project is intentionally scoped as a simulator. It is not connected to a live exchange and does not implement a real trading strategy.
-
-## Current System Flow
-
-sample feed file
+```text
+sample feed
     ↓
 feed replay
     ↓
@@ -24,219 +15,168 @@ market-data parser
     ↓
 simple strategy
     ↓
-order pipeline
+fixed-capacity order pipeline
+    ↓
+pre-trade risk
     ↓
 order gateway
     ↓
 exchange simulator
-
-## Build
-
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build
-
-## Run Demo
-
-./build/llgw
-
-Expected demo output includes replay, strategy, pipeline, and gateway summaries.
-
-## Run Tests
-
-./scripts/run_tests.sh
-
-The test script currently runs parser, feed replay, exchange simulator, order gateway, strategy, end-to-end order flow, ring buffer, order pipeline, and end-to-end pipeline tests.
-
-## Repository Structure
-
-include/llgw/      public headers
-src/               implementation files
-tests/             correctness-focused test executables
-data/              sample feed data
-docs/              design notes, architecture notes, study log
-scripts/           helper scripts
-
-## Design Principles
-
-- Correctness before performance claims
-- Deterministic tests before optimization
-- Explicit error/status handling
-- Small components with clear responsibilities
-- Honest documentation of limitations
-- No alpha/profitability claims
-- No production-readiness claims
-
-## Documentation
-
-- docs/architecture.md explains the current system design and limitations.
-- docs/project_status.md summarizes completed work and near-term next steps.
-- docs/study_log.md records the staged build process.
-- docs/stage1_design_notes.md captures parser and replay design notes.
-
-## Current Limitations
-
-- No latency benchmarks yet
-- No network input yet
-- No async/threaded pipeline yet
-- No order book, fills, partial fills, or matching engine
-- No live exchange connectivity
-- Queued order symbols currently require careful lifetime handling because symbols are still represented with std::string_view
-
-## Next Step
-
-The next architecture step is to replace queued order symbols with owned or fixed-size symbol storage before introducing asynchronous queueing or benchmarking.
-
-## Benchmarks
-
-The project includes a batched parser benchmark smoke harness with process stabilization and explicit first-trial handling.
-
-Example single-input run:
-
-./scripts/run_benchmarks.sh --stabilization-iterations 100000 --warmup 6400 --iterations 64000 --trials 5 --batch-size 64 --input-set single
-
-Example varied-input run:
-
-./scripts/run_benchmarks.sh --stabilization-iterations 100000 --warmup 6400 --iterations 64000 --trials 5 --batch-size 64 --input-set varied
-
-Example CSV output:
-
-./scripts/run_benchmarks.sh --stabilization-iterations 100000 --warmup 6400 --iterations 64000 --trials 5 --batch-size 64 --input-set varied --csv benchmark_results/parser_stabilized.csv
-
-The first measured trial remains visible but is excluded from a separate steady-state candidate summary. The harness also reports a separate baseline loop, clock-pair timing, timed parser throughput, repeated trials, and environment metadata.
-
-Results are local and machine-dependent and should not be interpreted as production latency or throughput claims. See docs/benchmark_methodology.md.
-
-### In-Memory End-to-End Path Benchmark
-
-A separate benchmark measures:
-
-text line → parser → strategy → order pipeline → gateway → exchange simulator
-
-Mixed workload:
-
-./scripts/run_end_to_end_benchmark.sh --stabilization-iterations 100000 --warmup 6400 --iterations 64000 --trials 5 --batch-size 64 --workload mixed
-
-All-orders workload:
-
-./scripts/run_end_to_end_benchmark.sh --stabilization-iterations 100000 --warmup 6400 --iterations 64000 --trials 5 --batch-size 64 --workload all-orders
-
-The benchmark excludes file I/O, feed replay, networking, and live exchange behavior. It validates system counters and reports local timed events per second, not production throughput.
-
-See docs/end_to_end_benchmark_methodology.md.
-
-### Paired Path-Comparison Benchmark
-
-A paired benchmark compares:
-
-text line → parser → strategy → pipeline → gateway → exchange
-
-against:
-
-pre-parsed update → strategy → pipeline → gateway → exchange
-
-It supports no-orders, mixed, and all-orders workloads.
-
-Example:
-
-./scripts/run_path_comparison_benchmark.sh --stabilization-iterations 100000 --warmup 6400 --iterations 64000 --trials 5 --batch-size 64 --workload mixed
-
-The paired difference is descriptive and must not be interpreted as exact parser latency.
-
-See docs/path_comparison_benchmark_methodology.md.
-
-### Consolidated Benchmark Suite
-
-Run the quick local suite:
-
-    ./scripts/run_benchmark_suite.sh
-
-Run the larger local suite:
-
-    ./scripts/run_benchmark_suite.sh --mode full --prefix benchmark_results/local_full_suite
-
-The suite builds once and runs the parser, in-memory end-to-end, and paired path-comparison benchmarks.
-
-CSV outputs are local artifacts, not CI performance gates or production claims.
-
-See docs/benchmark_suite.md.
-
-### Continuous Integration
-
-GitHub Actions runs the repository checks and the quick seven-case benchmark smoke suite on pushes to `main`, pull requests, and manual dispatch.
-
-Run the same checks locally:
-
-    ./scripts/run_ci_smoke.sh benchmark_results/local_ci_smoke
-
-CI validates successful builds, tests, benchmark execution, invariants, and CSV creation. It does not enforce latency or throughput thresholds.
-
-See `docs/ci.md`.
-
-### Pre-Trade Risk Layer
-
-Orders can be checked before they reach the gateway:
-
-```text
-strategy
-→ order pipeline
-→ pre-trade risk manager
-→ order gateway
-→ exchange simulator
+    ↓
+lifecycle tracking
+    ↓
+structured execution reports
 ```
 
-The deterministic checks cover symbol validity, finite positive price, positive quantity, maximum quantity, maximum notional, and an optional symbol allowlist.
-
-Risk-rejected orders are counted by explicit reason and never reach the gateway.
-
-See `docs/pre_trade_risk.md`.
-
-### Order Lifecycle Tracking
-
-Orders can be tracked through deterministic states:
-
-```text
-created → queued → risk_rejected
-```
-
-or:
-
-```text
-created → queued → sent → exchange_accepted | exchange_rejected
-```
-
-The tracker enforces legal transitions, preserves rejection reasons, rejects duplicate tracking, and verifies that risk-rejected orders never reach the gateway.
-
-See `docs/order_lifecycle.md`.
-
-### Cancellation and Amendment Flow
-
-Accepted exchange orders can be amended or cancelled deterministically.
+Accepted orders can also be amended or cancelled:
 
 ```text
 exchange_accepted → amend_pending → exchange_accepted
 exchange_accepted → cancel_pending → cancelled
 ```
 
-Rejected amendments preserve the original active order. Illegal lifecycle actions are rejected before reaching the exchange.
+## Capabilities
 
-See `docs/order_actions.md`.
+- fixed-format market-data parsing with explicit error statuses
+- deterministic file replay
+- fixed-capacity ring buffer and order pipeline
+- owned fixed-size symbols for queued orders
+- pre-trade quantity, notional, and symbol-allowlist checks
+- deterministic exchange acceptance and rejection
+- active-order storage
+- order amendment and cancellation
+- enforced lifecycle transitions
+- structured execution reports with stable rejection fields
+- unit, integration, end-to-end, and hardening tests
+- CTest registration
+- warnings-as-errors builds
+- platform-aware sanitizer checks
+- reproducible local benchmark harnesses
+- GitHub Actions correctness and benchmark smoke checks
 
-### Structured Execution Reports
+## Build and Run
 
-Lifecycle transitions can emit deterministic structured reports with monotonic event indexes, sequence IDs, event types, rejection sources, and stable rejection reasons.
-
-```text
-event=5 sequence_id=42 type=exchange_rejected reject_source=exchange reject_reason=duplicate_sequence
+```bash
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+./build/llgw
 ```
 
-See `docs/execution_reports.md`.
+## Tests
 
-### Production-Readiness Quality Gate
+```bash
+./scripts/run_tests.sh
+```
 
-Run the strict build, complete CTest suite, and platform-supported sanitizer checks with:
+Or through CTest:
+
+```bash
+ctest --test-dir build --output-on-failure
+```
+
+## Quality Gate
 
 ```bash
 ./scripts/run_quality_gate.sh
 ```
 
-The audit explicitly documents ownership, allocation, concurrency, recovery, and benchmarking boundaries. See `docs/production_readiness.md`.
+The quality gate runs:
+
+- a clean Release build with warnings treated as errors
+- all 20 registered CTest cases
+- a clean sanitizer build
+- all 20 CTest cases under platform-supported sanitizers
+
+Sanitizer policy:
+
+- AppleClang on macOS: UndefinedBehaviorSanitizer
+- Clang or GCC on Linux: AddressSanitizer and UndefinedBehaviorSanitizer
+
+## Final Validation
+
+```bash
+./scripts/run_final_validation.sh
+```
+
+This runs the quality gate, the seven-case quick benchmark suite, repository consistency checks, and release-document checks.
+
+## Benchmarks
+
+Quick suite:
+
+```bash
+./scripts/run_benchmark_suite.sh
+```
+
+Larger local suite:
+
+```bash
+./scripts/run_benchmark_suite.sh \
+  --mode full \
+  --prefix benchmark_results/local_full_suite
+```
+
+The suite covers:
+
+- parser: single and varied input sets
+- in-memory parser-to-exchange path: mixed and all-orders workloads
+- paired text versus prepared path: no-orders, mixed, and all-orders workloads
+
+Results are local and machine-dependent. They exclude networking, file I/O in timed paths, live exchange behavior, cross-thread communication, and production workload distributions. Benchmark values are not CI performance thresholds.
+
+See:
+
+- `docs/benchmark_methodology.md`
+- `docs/end_to_end_benchmark_methodology.md`
+- `docs/path_comparison_benchmark_methodology.md`
+- `docs/benchmark_suite.md`
+- `docs/final_report.md`
+
+## Repository Structure
+
+```text
+include/llgw/       public C++ headers
+src/                implementations and demo
+tests/              correctness and hardening tests
+benchmarks/         benchmark executables
+scripts/            build, test, benchmark, CI, and validation helpers
+data/               deterministic sample feed
+docs/               architecture, methodology, audit, and release documents
+.github/workflows/  CI configuration
+```
+
+## Design Principles
+
+- correctness before optimization
+- deterministic behavior before concurrency
+- explicit rejection reasons and lifecycle states
+- bounded storage where it matters to the modeled path
+- no hidden benchmark subtraction
+- no unsupported latency claims
+- documented ownership and failure boundaries
+- reproducible validation over anecdotal success
+
+## Scope Boundaries
+
+This project is not a live or production trading gateway. It does not provide:
+
+- network transport or exchange protocols
+- multithreaded or lock-free execution
+- persistent state or crash recovery
+- fills, partial fills, or a matching engine
+- exchange-assigned order identifiers
+- clock synchronization
+- durable audit storage
+- production risk governance
+- authentication or secrets handling
+- a real alpha strategy
+
+## Documentation
+
+- `docs/architecture.md` — current component and data-flow design
+- `docs/project_status.md` — completed scope and release status
+- `docs/production_readiness.md` — hardening evidence and production boundary
+- `docs/final_report.md` — final technical report
+- `docs/portfolio_summary.md` — concise project presentation
+- `docs/release_checklist.md` — release procedure
+- `docs/study_log.md` — day-by-day implementation record

@@ -1,156 +1,217 @@
-# Architecture Notes
+# Architecture
 
-## Project Scope
+## Scope
 
-This project is a C++20 learning project focused on deterministic components commonly found in latency-sensitive trading infrastructure:
+The repository models deterministic components commonly found in an electronic-trading execution path.
 
-- fixed-format market-data parsing
-- deterministic feed replay
-- simple strategy-to-order flow
-- order gateway simulation
-- exchange-side accept/reject simulation
-- fixed-size ring-buffer-backed order pipeline
-- correctness-focused tests
+It is a single-process C++20 simulator. It is intentionally not a live exchange gateway, matching engine, or production risk platform.
 
-The project is intentionally scoped as a simulator. It is not connected to a live exchange and does not implement a real trading strategy.
+## End-to-End Flow
 
-## Current Data Flow
-
-sample feed file
-    ↓
+```text
+data/sample_feed.txt
+        ↓
 ReplayMarketDataFile
-    ↓
+        ↓
+MarketDataParser
+        ↓
 MarketDataUpdate
-    ↓
+        ↓
 SimpleStrategy
-    ↓
+        ↓
 OrderRequest
-    ↓
-OrderPipeline
-    ↓
+        ↓
+OrderPipeline<Capacity>
+        ↓
+PreTradeRiskManager
+        ↓
 OrderGateway
-    ↓
+        ↓
 ExchangeSimulator
-    ↓
+        ↓
 OrderResponse
+        ↓
+OrderLifecycleTracker
+        ↓
+ExecutionReportJournal
+```
+
+Order actions extend the accepted-order path:
+
+```text
+ExchangeSimulator active order
+        ↓
+AmendRequest or CancelRequest
+        ↓
+OrderGateway
+        ↓
+ExchangeSimulator
+        ↓
+lifecycle transition
+        ↓
+structured execution report
+```
 
 ## Components
 
 ### MarketDataParser
 
-Parses fixed-format market-data lines:
+Parses:
 
+```text
 SYMBOL,BID_PRICE,BID_SIZE,ASK_PRICE,ASK_SIZE,EXCHANGE_TS_NS
+```
 
-The parser validates:
+Validation includes:
 
 - exact field count
 - non-empty symbol
-- numeric fields
-- positive prices
+- valid numeric fields
+- finite positive prices
 - non-zero sizes
 - non-crossed market state
+- CRLF handling
 
-It returns explicit ParseStatus values instead of throwing exceptions.
+Failures return explicit statuses rather than exceptions.
 
-### FeedReplay
+### Feed Replay
 
-ReplayMarketDataFile reads a feed file line by line and invokes a callback for each valid market-data update.
+`ReplayMarketDataFile` reads deterministic input one line at a time and invokes a callback for each valid update.
 
-Replay stops at the first malformed line and reports:
+Replay stops at the first malformed line and reports lines read, updates parsed, error line, and parser status.
 
-- lines read
-- updates parsed
-- error line
-- parser status
+### FixedSymbol
+
+`FixedSymbol` provides owned, fixed-capacity symbol storage. Queued `OrderRequest` values therefore do not depend on the lifetime of the source feed line.
 
 ### SimpleStrategy
 
-SimpleStrategy is intentionally simple. It generates a test buy order when the bid/ask spread meets a configured threshold.
-
-It is not intended to represent alpha. Its purpose is to exercise the deterministic system path from market data to order submission.
-
-### ExchangeSimulator
-
-ExchangeSimulator accepts or rejects orders deterministically.
-
-It currently rejects:
-
-- empty symbols
-- non-positive prices
-- zero quantity
-- duplicate sequence IDs
-
-It does not model order books, fills, partial fills, matching, latency, or live exchange connectivity.
-
-### OrderGateway
-
-OrderGateway sends orders to the exchange simulator and tracks:
-
-- orders sent
-- orders accepted
-- orders rejected
+The strategy generates a small test buy order when the spread meets a configured threshold. It exists only to exercise the system path. It is not an alpha model and makes no profitability claim.
 
 ### RingBuffer
 
-RingBuffer<T, Capacity> is a fixed-size, correctness-focused ring buffer.
+`RingBuffer<T, Capacity>` is a fixed-capacity FIFO container with push, pop, full and empty checks, size tracking, and wrap-around behavior.
 
-It currently supports:
-
-- push
-- pop
-- empty/full checks
-- size tracking
-- wrap-around behavior
-
-It is not currently a lock-free or atomic SPSC queue.
+It is correctness-oriented. It is not atomic, lock-free, or thread-safe.
 
 ### OrderPipeline
 
-OrderPipeline<Capacity> uses RingBuffer<OrderRequest, Capacity> to queue order requests before draining them to the order gateway.
+The pipeline owns the fixed-capacity queue and coordinates enqueue and backpressure, pre-trade risk, gateway dispatch, lifecycle transitions, rejection attribution, and counters.
 
-It tracks:
+Optional dependencies are non-owning pointers.
 
-- orders enqueued
-- orders dropped on enqueue
-- orders drained
-- orders accepted
-- orders rejected
+### PreTradeRiskManager
 
-## Current Important Limitation
+Checks symbol validity, finite positive price, positive quantity, maximum quantity, maximum order notional, and an optional fixed-capacity symbol allowlist.
 
-MarketDataUpdate.symbol and OrderRequest.symbol currently use std::string_view.
+Risk rejections do not reach the gateway.
 
-This means queued orders must not outlive the feed line that produced them. In the current main demo, the pipeline drains immediately inside the replay callback to avoid symbol lifetime issues.
+### OrderGateway
 
-Before introducing async queueing or cross-thread handoff, OrderRequest.symbol should be changed to owned or fixed-size symbol storage.
+Coordinates order, cancel, and amend requests with the exchange simulator. It tracks accepted and rejected outcomes and integrates action transitions with the lifecycle tracker.
 
-## Testing Philosophy
+### ExchangeSimulator
 
-The project currently prioritizes correctness before performance claims.
+Validates submissions and maintains deterministic active-order state. It supports order acceptance and rejection, duplicate sequence prevention, active-order lookup, amendment, and cancellation.
 
-Tests cover:
+It does not implement matching, fills, queue priority, market impact, or exchange latency.
 
-- parser correctness
-- malformed input handling
-- feed replay behavior
-- exchange simulator rejection paths
-- order gateway counters
-- simple strategy behavior
-- end-to-end order flow
-- ring buffer behavior
-- order pipeline behavior
+### OrderLifecycleTracker
 
-## What This Project Does Not Claim
+Submission states:
 
-This project does not claim to be:
+```text
+created → queued → risk_rejected
+created → queued → sent → exchange_rejected
+created → queued → sent → exchange_accepted
+```
 
-- production-ready
-- exchange-grade
-- ultra-low-latency
-- lock-free
-- profitable
-- connected to live markets
-- a real trading strategy
+Action states:
 
-Performance claims should only be added after benchmark methodology, reproducibility notes, and measurement limitations are documented.
+```text
+exchange_accepted → amend_pending → exchange_accepted
+exchange_accepted → cancel_pending → cancelled
+```
+
+The tracker rejects duplicate registration, unknown orders, invalid transitions, and terminal-state transitions.
+
+### ExecutionReportJournal
+
+Records successful lifecycle transitions in deterministic order.
+
+Each report contains a monotonic event index, sequence ID, event type, rejection source, and stable rejection reason.
+
+The journal is synchronous and in memory.
+
+## Ownership Model
+
+```text
+OrderGateway
+  ├─ ExchangeSimulator*
+  └─ OrderLifecycleTracker*
+
+OrderPipeline
+  ├─ OrderGateway*
+  ├─ PreTradeRiskManager*
+  └─ OrderLifecycleTracker*
+
+OrderLifecycleTracker
+  └─ ExecutionReportJournal*
+```
+
+Callers must keep dependencies alive longer than dependants. The demo constructs objects in dependency order so reverse destruction is safe.
+
+## Allocation Boundary
+
+Fixed or bounded structures:
+
+- parser operations
+- `FixedSymbol`
+- `RingBuffer`
+- queued order representation
+- risk symbol allowlist
+
+Dynamic structures retained for clarity and observability:
+
+- exchange active-order map
+- seen-sequence set
+- lifecycle record map
+- execution-report vector
+- filtered report copies
+
+The repository does not claim a fully allocation-free hot path.
+
+## Concurrency Boundary
+
+All components are single-threaded.
+
+There is no atomic queue, memory-ordering protocol, cross-thread ownership transfer, lock-free claim, or concurrent-writer support.
+
+## Validation Architecture
+
+```text
+compiler warnings as errors
+        ↓
+20 CTest cases
+        ↓
+platform-supported sanitizers
+        ↓
+seven-case benchmark smoke suite
+        ↓
+CSV and invariant validation
+```
+
+GitHub Actions runs the same correctness-oriented gate without latency thresholds.
+
+## Deliberate Omissions
+
+- sockets and wire protocols
+- reconnect handling
+- packet loss and sequence gaps
+- persistence and recovery
+- fills and partial fills
+- matching and order books
+- clock synchronization
+- production telemetry transport
+- production risk governance
+- multithreading and CPU affinity
